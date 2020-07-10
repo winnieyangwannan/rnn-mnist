@@ -10,7 +10,7 @@ from task import generate_trials, rule_name
 from network import Model
 import tools
 from matplotlib.pyplot import *
-from MINST_task import *
+from mnist_task import *
 import matplotlib.pylab as pl
 
 def easy_activity_plot(model_dir, rule):
@@ -191,26 +191,29 @@ def activation_patter_plot_mnist(model_dir, save_dir):
 
         # Generate a batch of trial from the test mode
         hp['current_step'] = 0
-        hp['batch_size_test'] = 10000
+        hp['batch_size_test'] = 1000
         trial = generate_trials('mnist', hp, mode='test')
         feed_dict = tools.gen_feed_dict(model, trial, hp)
-        h, y, y_hat = sess.run([model.h, model.y, model.y_hat], feed_dict=feed_dict)
-        indexes_test = index_each_category(y[-1][:, 1:], max_num=1.05)
+        x, h, y, y_hat = sess.run([model.x, model.h, model.y, model.y_hat], feed_dict=feed_dict)
+        #indexes_test = filter_digit(model.x, y, 3)
+        #indexes_test = index_each_category(y[-1][:, 1:], max_num=1.05)
+
+        _, x_test, _, y_test = load_mnist_data()
+        x_test = x_test[0:1000]
+        y_test = y_test[0:1000]
 
         fig = plt.figure(figsize=(6, 6))
         for i in range(10):
             ax = fig.add_subplot(5, 2, i+1)
-            indexs = indexes_test[str(i)][0][:]
-            ax.imshow(h[-1, indexs, :].mean(axis=1).reshape(20, -1), cmap='RdPu')
+            _, indexs = filter_digit(x_test, y_test, i)
+            im = ax.imshow(h[-1, indexs, :].mean(axis=0).reshape(20, -1))
             ax.set_title(str(i))
 
             ax.set_xticks([])
             ax.set_yticks([])
-            plt.colorbar()
-
-
+        plt.colorbar(im)
         plt.tight_layout()
-        fig.savefig(save_dir + '_activation_pattern.pdf')
+        fig.savefig(save_dir + 'activation_pattern.pdf')
         plt.show()
 
 
@@ -239,10 +242,17 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
 
         # Generate a batch of trial from the test mode
         hp['current_step'] = 0
+        hp['batch_size_test'] = 400
+
+        _, x_test, _, y_test = load_mnist_data()
+        x_test = x_test[0:400]
+        y_test = y_test[0:400]
+
         trial = generate_trials('mnist', hp, mode='test')
         feed_dict = tools.gen_feed_dict(model, trial, hp)
         h, y, y_hat = sess.run([model.h, model.y, model.y_hat], feed_dict=feed_dict)
-        indexes_test = index_each_category(y[-1][:,1:],max_num=1.05)
+
+        #indexes_test = index_each_category(y[-1][:,1:],max_num=1.05)
         #indexes_test['0']
 
     for p in range(int(400 / 40)):
@@ -253,14 +263,15 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
 
             if plot_type == 'plot_all':
                 for i in range(10):
-                    plot_indexs = indexes_test[str(i)][0]
+                    _, plot_indexs = filter_digit(x_test, y_test, i)
+                    #plot_indexs = indexes_test[str(i)][0]
                     for ii in plot_indexs:
                         _ = ax.plot(t_plot, h[t_start:, ii, u+40*p], lw=0.5, c=colors[i])
 
             if plot_type == 'plot_average':
                # Plot stimulus averaged trace
                for i in range(10):
-                   plot_indexs = indexes_test[str(i)][0]
+                   _, plot_indexs = filter_digit(x_test, y_test, i)
                    _ = ax.plot(t_plot, h[t_start:, plot_indexs,  u+40*p].mean(axis=1), lw=1, c=colors[i])
 
             fs = 6

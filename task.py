@@ -3,11 +3,11 @@
 from __future__ import division
 import six
 import numpy as np
-from MINST_task import *
+from mnist_task import *
+from mnist_task import _mnist
 from tensorflow import keras
 
-# all rules
-from MINST_task import _mnist
+
 
 rules_dict = \
     {'all' : ['fdgo', 'reactgo', 'delaygo', 'fdanti', 'reactanti', 'delayanti',
@@ -1589,6 +1589,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
 
     if rule == 'mnist':
         trial = _mnist(config, mode, **kwargs)
+
     else:
         trial = rule_mapping[rule](config, mode, **kwargs)
 
@@ -1625,10 +1626,14 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
         else:
             rule_strength = [1.] * len(rule)
 
-    for r, s in zip(rule, rule_strength):
-        trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
+    # TODO: Winnie added
+    if rule == ['mnist']:
+        trial.add_rule(on=0, off=-1, strength=1)
+    else:
+        for r, s in zip(rule, rule_strength):
+            trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
 
-    if noise_on:
-        trial.add_x_noise()
+        if noise_on:
+            trial.add_x_noise()
 
     return trial

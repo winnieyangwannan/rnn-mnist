@@ -1,11 +1,63 @@
 import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+import matplotlib.pyplot as plt
+
+
+def load_mnist_data():
+
+    (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
+
+    # Rescale the images from [0,255] to the [0.0,1.0] range.
+    x_train, x_test = x_train[..., np.newaxis] / 255.0, x_test[..., np.newaxis] / 255.0
+
+    #x_vali = x_test[0: int(len(x_test)*0.6)]
+    #y_vali = y_test[0: int(len(y_test)*0.6)]
+
+    #x_test = x_test[int(len(x_test) * 0.4):]
+    #y_test = y_test[int(len(y_test) * 0.4):]
+
+    # flatten the image
+    x_train = x_train.reshape(len(x_train), -1)
+    #x_vali = x_vali.reshape(len(x_vali), -1)
+    x_test = x_test.reshape(len(x_test), -1)
+
+
+    return x_train, x_test, y_train, y_test
+
+
+x_train, x_test, y_train, y_test = load_mnist_data()
+a = 1
+
+def filter_digit(x, y, filter_digit):
+    keep = (y == filter_digit)
+    x, _ = x[keep], y[keep]
+    y = np.where(y == filter_digit)[0]
+    return x, y
+
+
+#x_train_3, y_train_3 = filter_digit(x_train, y_train, 3)
+#a = 1
+#x_train_3 = x_train_3.reshape(len(x_train_3), 28, 28, 1)
+#plt.imshow(x_train_3[0, :, :, 0])
+#plt.colorbar()
+#plt.show()
+#a=1
+
 
 def _mnist(config, mode, **kwargs):
+
     dt = config['dt']
     rng = config['rng']
+    step = config['current_step']
+
+    # load mnist
+    x_train, x_test, y_train, y_test = load_mnist_data()
+
 
     if mode == 'vali':
-        batch_size = kwargs['batch_size']
+        batch_size = config['batch_size_vali']
+        y_test = tf.keras.utils.to_categorical(y_test)
 
         # Time of stimuluss on/off
         stim_on = int(rng.uniform(100,400)/dt)
@@ -15,10 +67,16 @@ def _mnist(config, mode, **kwargs):
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
         tdim = stim_on+stim_dur+int(500/dt)
+
+        stim_batch = x_test[step*batch_size:(step+1)*batch_size, :]
+        target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
+
 
 
     elif mode == 'train':
-        batch_size = kwargs['batch_size']
+        # TODO: change test length here later
+        batch_size = config['batch_size_train']
+        y_train = tf.keras.utils.to_categorical(y_train) # from label to one hot encoding
 
         # Time of stimuluss on/off
         stim_on = int(rng.uniform(100,400)/dt)
@@ -29,32 +87,39 @@ def _mnist(config, mode, **kwargs):
 
         # each batch consists of sequences of equal length
         tdim = stim_on+stim_dur+int(500/dt)
+
+        stim_batch = x_train[step*batch_size:(step+1)*batch_size, :]
+        target_batch = y_train[step*batch_size:(step+1)*batch_size, :]
 
 
 
     elif mode == 'test':
-        batch_size = kwargs['batch_size_test']
+        # TODO: things need to be fixed here
+        batch_size = config['batch_size_test']
+        y_test = tf.keras.utils.to_categorical(y_test)
 
-        # Dense coverage of the stimulus space
-        stim_on = int(500/dt)
-        stim_ons = (np.ones(batch_size) * stim_on).astype(int)
+        # TODO: change test length here later
+        # Time of stimuluss on/off
+        stim_on = int(100/dt)
+        stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        fix_off = int(2000/dt)
-        stim_offs = (np.ones(batch_size) * fix_off).astype(int)
+        stim_dur = int(1400)/dt
+        fix_offs = (stim_ons+stim_dur).astype(int)
+        # each batch consists of sequences of equal length
+        tdim = stim_on+stim_dur+int(500/dt)
 
-        tdim = int(2500/dt)
+        stim_batch = x_test[step*batch_size:(step+1)*batch_size, :]
+        target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
 
     # time to check the saccade location
+    # TODO: check what does this do
     check_ons = fix_offs + int(100 / dt)
 
     trial = Trial_mnist(config, tdim, batch_size)
-    trial.add('fix_in', offs=fix_offs)
-    trial.add('stim', stim1_locs, ons=stim_ons, offs=fix_offs, strengths=stim1_strengths, mods=stim_mod)
-    trial.add('stim', stim2_locs, ons=stim_ons, offs=fix_offs, strengths=stim2_strengths, mods=stim_mod)
-    trial.add('fix_out', offs=fix_offs)
-    stim_locs = [stim1_locs[i] if (stim1_strengths[i] > stim2_strengths[i])
-                 else stim2_locs[i] for i in range(batch_size)]
-    trial.add('out', stim_locs, ons=fix_offs)
+    trial.add('fix_in', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
+    trial.add('stim',  stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
+    trial.add('fix_out', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
+    trial.add('out', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
@@ -82,21 +147,24 @@ class Trial_mnist(object):
         self.config = config
         self.dt = self.config['dt']
 
+
         self.n_eachring = self.config['n_eachring']
         self.n_input = self.config['n_input']
         self.n_output = self.config['n_output']
-        self.pref = np.arange(0, 2 * np.pi, 2 * np.pi / self.n_eachring)  # preferences
+        #self.pref = np.arange(0, 2 * np.pi, 2 * np.pi / self.n_eachring)  # preferences
 
-        self.batch_size = batch_size
-        self.tdim = tdim
-        self.x = np.zeros((tdim, batch_size, self.n_input), dtype=self.float_type)
-        self.y = np.zeros((tdim, batch_size, self.n_output), dtype=self.float_type)
+        self.batch_size = int(batch_size)
+        self.tdim = int(tdim)
+        self.x = np.zeros((self.tdim, batch_size, self.n_input), dtype=self.float_type)
+        self.y = np.zeros((self.tdim, batch_size, self.n_output), dtype=self.float_type)
+
         if self.config['loss_type'] == 'lsq':
             self.y[:, :, :] = 0.05
-        # y_loc is the stimulus location of the output, -1 for fixation, (0,2 pi) for response
-        self.y_loc = -np.ones((tdim, batch_size), dtype=self.float_type)
 
-        self._sigma_x = config['sigma_x'] * np.sqrt(2 / config['alpha'])
+        # y_loc is the stimulus location of the output, -1 for fixation, (0,2 pi) for response
+        self.y_loc = -np.ones((self.tdim, batch_size), dtype=self.float_type)
+        # TODO: winnie comment out
+        #self._sigma_x = config['sigma_x'] * np.sqrt(2 / config['alpha'])
 
     def expand(self, var):
         """Expand an int/float to list."""
@@ -104,7 +172,7 @@ class Trial_mnist(object):
             var = [var] * self.batch_size
         return var
 
-    def add(self, loc_type, locs=None, ons=None, offs=None, strengths=1, mods=None):
+    def add(self, loc_type, stims=None, targets=None, ons=None, offs=None, mods=None):
         """Add an input or stimulus output.
 
         Args:
@@ -118,16 +186,18 @@ class Trial_mnist(object):
 
         ons = self.expand(ons)
         offs = self.expand(offs)
-        strengths = self.expand(strengths)
+        #strengths = self.expand(strengths)
         mods = self.expand(mods)
+        #stims = self.expand(stims)
 
         for i in range(self.batch_size):
             if loc_type == 'fix_in':
                 self.x[ons[i]: offs[i], i, 0] = 1
             elif loc_type == 'stim':
                 # Assuming that mods[i] starts from 1
-                self.x[ons[i]: offs[i], i, 1 + (mods[i] - 1) * self.n_eachring:1 + mods[i] * self.n_eachring] \
-                    += self.add_x_loc(locs[i]) * strengths[i]
+                stim = stims[i, :]
+                stim = np.tile(stim, (offs[i]-ons[i], 1))  # tile to the length of the time
+                self.x[ons[i]: offs[i], i, 1:-1] += stim
             elif loc_type == 'fix_out':
                 # Notice this shouldn't be set at 1, because the output is logistic and saturates at 1
                 if self.config['loss_type'] == 'lsq':
@@ -136,12 +206,9 @@ class Trial_mnist(object):
                     self.y[ons[i]: offs[i], i, 0] = 1.0
             elif loc_type == 'out':
                 if self.config['loss_type'] == 'lsq':
-                    self.y[ons[i]: offs[i], i, 1:] += self.add_y_loc(locs[i]) * strengths[i]
-                else:
-                    y_tmp = self.add_y_loc(locs[i])
-                    y_tmp /= np.sum(y_tmp)
-                    self.y[ons[i]: offs[i], i, 1:] += y_tmp
-                self.y_loc[ons[i]: offs[i], i] = locs[i]
+                    target = targets[i, :]
+                    target = np.tile(target, (offs[i]-ons[i], 1))
+                    self.y[ons[i]: offs[i], i, 1:] += targets[i, :]
             else:
                 raise ValueError('Unknown loc_type')
 
@@ -189,31 +256,8 @@ class Trial_mnist(object):
             self.c_mask = c_mask.reshape((self.tdim * self.batch_size,))
             self.c_mask /= self.c_mask.mean()
 
-    def add_rule(self, rule, on=None, off=None, strength=1.):
+    def add_rule(self, on=None, off=None, strength=1.):
         """Add rule input."""
-        if isinstance(rule, int):
-            self.x[on:off, :, self.config['rule_start'] + rule] = strength
-        else:
-            ind_rule = get_rule_index(rule, self.config)
-            self.x[on:off, :, ind_rule] = strength
-
-    def add_x_loc(self, x_loc):
-        """Input activity given location."""
-        dist = get_dist(x_loc - self.pref)  # periodic boundary
-        dist /= np.pi / 8
-        return 0.8 * np.exp(-dist ** 2 / 2)
-
-    def add_y_loc(self, y_loc):
-        """Target response given location."""
-        dist = get_dist(y_loc - self.pref)  # periodic boundary
-        if self.config['loss_type'] == 'lsq':
-            dist /= np.pi / 8
-            y = 0.8 * np.exp(-dist ** 2 / 2)
-        else:
-            # One-hot output
-            y = np.zeros_like(dist)
-            ind = np.argmin(dist)
-            y[ind] = 1.
-        return y
+        self.x[on:off, :, -1] = strength
 
 

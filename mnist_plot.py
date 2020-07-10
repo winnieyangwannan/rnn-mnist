@@ -17,21 +17,22 @@ from analysis import data_analysis
 from analysis import contextdm_analysis
 from analysis import posttrain_analysis
 
-root_dir = './data/debug/mnist'
-model_dir = root_dir + '/1'
-save_dir = './figure/mnist/1/'
+root_dir = './data/mnist'
+model_dir = root_dir + '/2'
+save_dir = './figure/mnist/2/'
 
 
 # # Performance Analysis-----------------------------------------------------
-standard_analysis.activation_patter_plot_mnist(model_dir=model_dir, save_dir=save_dir)
+#standard_analysis.activation_patter_plot_mnist(model_dir=model_dir, save_dir=save_dir)
 
-standard_analysis.pretty_singleneuron_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_type='plot_average')
+#standard_analysis.pretty_singleneuron_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_type='plot_average')
+
+performance.plot_performanceprogress_mnist(model_dir, save_dir=save_dir, rule_plot=['mnist'])
 
 standard_analysis.schematic_plot_mnist(model_dir=model_dir, save_dir=save_dir, rule='mnist')
 
 
 
-performance.plot_performanceprogress_mnist(model_dir, save_dir=save_dir, rule_plot=['mnist'])
 performance.psychometric_choice(model_dir)  # Psychometric for dm
 performance.psychometric_choiceattend(model_dir, no_ylabel=True)
 performance.psychometric_choiceint(model_dir, no_ylabel=True)
