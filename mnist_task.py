@@ -50,6 +50,7 @@ def _mnist(config, mode, **kwargs):
     dt = config['dt']
     rng = config['rng']
     step = config['current_step']
+    times = config['times']
 
     # load mnist
     x_train, x_test, y_train, y_test = load_mnist_data()
@@ -60,13 +61,13 @@ def _mnist(config, mode, **kwargs):
         y_test = tf.keras.utils.to_categorical(y_test)
 
         # Time of stimuluss on/off
-        stim_on = int(rng.uniform(100,400)/dt)
+        stim_on = int(rng.uniform(100*times,400*times)/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([400, 800, 1600])/dt)
+        stim_dur = int(rng.choice([400*times, 800*times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500/dt)
+        tdim = stim_on+stim_dur+int(500*times/dt)
 
         stim_batch = x_test[step*batch_size:(step+1)*batch_size, :]
         target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
@@ -79,14 +80,14 @@ def _mnist(config, mode, **kwargs):
         y_train = tf.keras.utils.to_categorical(y_train) # from label to one hot encoding
 
         # Time of stimuluss on/off
-        stim_on = int(rng.uniform(100,400)/dt)
+        stim_on = int(rng.uniform(100*times,400*times)/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([400, 800, 1600])/dt)
+        stim_dur = int(rng.choice([400*times, 800*times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
 
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500/dt)
+        tdim = stim_on+stim_dur+int(500*times/dt)
 
         stim_batch = x_train[step*batch_size:(step+1)*batch_size, :]
         target_batch = y_train[step*batch_size:(step+1)*batch_size, :]
@@ -98,27 +99,28 @@ def _mnist(config, mode, **kwargs):
         batch_size = config['batch_size_test']
         y_test = tf.keras.utils.to_categorical(y_test)
 
-        # TODO: change test length here later
         # Time of stimuluss on/off
-        stim_on = int(100/dt)
+        stim_on = int(400*times/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(1400)/dt
+        stim_dur = int(rng.choice([600*times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500/dt)
+        tdim = stim_on+stim_dur+int(500*times/dt)
 
         stim_batch = x_test[step*batch_size:(step+1)*batch_size, :]
         target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
+
 
     # time to check the saccade location
     # TODO: check what does this do
     check_ons = fix_offs + int(100 / dt)
 
+
     trial = Trial_mnist(config, tdim, batch_size)
-    trial.add('fix_in', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
+    #trial.add('fix_in', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
     trial.add('stim',  stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
-    trial.add('fix_out', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
+    #trial.add('fix_out', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
     trial.add('out', stims=stim_batch, targets=target_batch, ons=stim_ons, offs=fix_offs)
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
@@ -186,35 +188,33 @@ class Trial_mnist(object):
 
         ons = self.expand(ons)
         offs = self.expand(offs)
-        #strengths = self.expand(strengths)
-        mods = self.expand(mods)
-        #stims = self.expand(stims)
+
 
         for i in range(self.batch_size):
-            if loc_type == 'fix_in':
-                self.x[ons[i]: offs[i], i, 0] = 1
-            elif loc_type == 'stim':
+            #if loc_type == 'fix_in':
+                #self.x[ons[i]: offs[i], i, 0] = 1
+            if loc_type == 'stim':
                 # Assuming that mods[i] starts from 1
                 stim = stims[i, :]
                 stim = np.tile(stim, (offs[i]-ons[i], 1))  # tile to the length of the time
-                self.x[ons[i]: offs[i], i, 1:-1] += stim
-            elif loc_type == 'fix_out':
+                self.x[ons[i]: offs[i], i, :] += stim
+            #elif loc_type == 'fix_out':
                 # Notice this shouldn't be set at 1, because the output is logistic and saturates at 1
-                if self.config['loss_type'] == 'lsq':
-                    self.y[ons[i]: offs[i], i, 0] = 0.8
-                else:
-                    self.y[ons[i]: offs[i], i, 0] = 1.0
+             #   if self.config['loss_type'] == 'lsq':
+              #      self.y[ons[i]: offs[i], i, 0] = 0.8
+               # else:
+                #    self.y[ons[i]: offs[i], i, 0] = 1.0
             elif loc_type == 'out':
                 if self.config['loss_type'] == 'lsq':
-                    target = targets[i, :]
-                    target = np.tile(target, (offs[i]-ons[i], 1))
-                    self.y[ons[i]: offs[i], i, 1:] += targets[i, :]
+                    target = targets[i, :] # curreng batch
+                    target = np.tile(target, (len(self.y) - offs[i], 1))
+                    self.y[offs[i]:, i, :] += target
             else:
                 raise ValueError('Unknown loc_type')
 
-    def add_x_noise(self):
-        """Add input noise."""
-        self.x += self.config['rng'].randn(*self.x.shape) * self._sigma_x
+    #def add_x_noise(self):
+     #   """Add input noise."""
+      #  self.x += self.config['rng'].randn(*self.x.shape) * self._sigma_x
 
     def add_c_mask(self, pre_offs, post_ons):
         """Add a cost mask.
@@ -256,8 +256,8 @@ class Trial_mnist(object):
             self.c_mask = c_mask.reshape((self.tdim * self.batch_size,))
             self.c_mask /= self.c_mask.mean()
 
-    def add_rule(self, on=None, off=None, strength=1.):
-        """Add rule input."""
-        self.x[on:off, :, -1] = strength
+    #def add_rule(self, on=None, off=None, strength=1.):
+     #   """Add rule input."""
+      #  self.x[on:off, :, -1] = strength
 
 

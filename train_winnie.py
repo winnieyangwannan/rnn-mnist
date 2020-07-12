@@ -35,10 +35,10 @@ def get_default_hp(ruleset):
 
     #TODO: Winnie changed
     if ruleset == 'mnist':
-        n_input, n_output = 1 + n_rule + 784, 10+1
-        batch_size_train = 600
-        batch_size_test = 400
-        batch_size_vali = 60
+        n_input, n_output = 784, 10
+        batch_size_train = 60
+        batch_size_test = 40
+        batch_size_vali = 10
 
         EPOCHS = 20
     else:
@@ -100,7 +100,7 @@ def get_default_hp(ruleset):
         # number of rules
         'n_rule': n_rule,
         # first input index for rule units
-        'rule_start': 1 + num_ring * n_eachring,
+        'rule_start': num_ring * n_eachring,
         # number of input units
         'n_input': n_input,
         # number of output units
@@ -117,13 +117,14 @@ def get_default_hp(ruleset):
         'c_intsyn': 0,
         'ksi_intsyn': 0,
         # TODO: WINNIE ADDED
-        'TRAINING EPOCH': EPOCHS
+        'EPOCHS': EPOCHS
+
     }
 
     return hp
 
 
-def do_eval(sess, model, log, rule_train):
+def do_eval(sess, model, log, rule_train, epoch):
     """Do evaluation.
     Args:
         sess: tensorflow session
@@ -132,6 +133,7 @@ def do_eval(sess, model, log, rule_train):
         rule_train: string or list of strings, the rules being trained
     """
     hp = model.hp
+
     if not hasattr(rule_train, '__iter__'):
         rule_name_print = rule_train
     else:
@@ -168,45 +170,14 @@ def do_eval(sess, model, log, rule_train):
             creg_tmp.append(c_reg)
             perf_tmp.append(perf_test)
 
-        else:
-            n_rep = 16
-            batch_size_test_rep = int(hp['batch_size_test'] / n_rep)
-
-            for i_rep in range(n_rep):
-                trial = generate_trials(
-                    rule_test, hp, 'random', batch_size=batch_size_test_rep)
-                feed_dict = tools.gen_feed_dict(model, trial, hp)
-                c_lsq, c_reg, y_hat_test = sess.run(
-                    [model.cost_lsq, model.cost_reg, model.y_hat],
-                    feed_dict=feed_dict)
-
-                # Cost is first summed over time,
-                # and averaged across batch and units
-                # We did the averaging over time through c_mask
-                perf_test = np.mean(get_perf(y_hat_test, trial.y_loc))
-                clsq_tmp.append(c_lsq)
-                creg_tmp.append(c_reg)
-                perf_tmp.append(perf_test)
-
         log['cost_' + rule_test].append(np.mean(clsq_tmp, dtype=np.float64))
         log['creg_' + rule_test].append(np.mean(creg_tmp, dtype=np.float64))
-        log['perf_' + rule_test].append(np.mean(perf_tmp, dtype=np.float64))
+        log['perf_vali_' + rule_test + str(epoch)].append(np.mean(perf_tmp, dtype=np.float64))
         print('{:15s}'.format(rule_test) +
               '| cost {:0.6f}'.format(np.mean(clsq_tmp)) +
               '| c_reg {:0.6f}'.format(np.mean(creg_tmp)) +
               '  | perf {:0.2f}'.format(np.mean(perf_tmp)))
         sys.stdout.flush()
-
-    # TODO: This needs to be fixed since now rules are strings
-    if hasattr(rule_train, '__iter__'):
-        rule_tmp = rule_train
-    else:
-        rule_tmp = [rule_train]
-    perf_tests_mean = np.mean([log['perf_' + r][-1] for r in rule_tmp])
-    log['perf_avg'].append(perf_tests_mean)
-
-    perf_tests_min = np.min([log['perf_' + r][-1] for r in rule_tmp])
-    log['perf_min'].append(perf_tests_min)
 
     # Saving the model
     model.save()
@@ -312,6 +283,7 @@ def train(model_dir,
     # Record time
     t_start = time.time()
 
+
     with tf.Session() as sess:
         if load_dir is not None:
             model.restore(load_dir)  # complete restore
@@ -359,345 +331,70 @@ def train(model_dir,
                 model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
             model.set_optimizer(var_list=var_list)
 
-        step = 0
-        while step * hp['batch_size_train'] <= max_steps:
-            try:
 
-                # TODO: WINNIE ADD
-                hp['current_step'] = step
+        for epoch in range(hp['EPOCHS']):
+            step = 0
+            while step * hp['batch_size_train'] < 60000:
+                try:
 
-                # Validation
-                if step % display_step == 0:
-                    log['trials'].append(step * hp['batch_size_train'])
-                    log['times'].append(time.time() - t_start)
-                    log = do_eval(sess, model, log, hp['rule_trains'])
-                    # if log['perf_avg'][-1] > model.hp['target_perf']:
-                    # check if minimum performance is above target
+                    # TODO: WINNIE ADD
+                    hp['current_step'] = step
+
+                    # Validation
+                    if step % display_step == 0:
+                        log['trials'].append(step * hp['batch_size_train'])
+                        log['times'].append(time.time() - t_start)
+                        log = do_eval(sess, model, log, hp['rule_trains'], epoch)
+                        # if log['perf_avg'][-1] > model.hp['target_perf']:
+                        # check if minimum performance is above target
+                        # TODO: winnie changed
+
+                        if rich_output:
+                            display_rich_output(model, sess, step, log, model_dir)
+
+                    # Training
+                    # TODO: Winnie changed
+                    if hp['rule_trains'] == ['mnist']:
+                        rule_train_now = 'mnist'
+                    else:
+                        rule_train_now = hp['rng'].choice(hp['rule_trains'],
+                                                      p=hp['rule_probs'])
+
+                    # Generate a random batch of trials.
+                    # Each batch has the same trial length
+                    # TODO: WINNIE ADD, DELETE IF INCORRECT
+                    if hp['rule_trains'] == ['mnist']:
+                        trial_train = generate_trials(
+                            rule_train_now, hp, 'train',
+                            batch_size=hp['batch_size_train'])
+                    else:
+                        trial_train = generate_trials(
+                            rule_train_now, hp, 'random',
+                            batch_size=hp['batch_size_train'])
+
+                    # Generating feed_dict.
+                    feed_dict = tools.gen_feed_dict(model, trial_train, hp)
+
                     # TODO: winnie changed
-                    #if log['perf_min'][-1] > model.hp['target_perf']:
-                     #   print('Perf reached the target: {:0.2f}'.format(
-                      #      hp['target_perf']))
-                       # break
+                    _, c_lsq_train, y_hat_train = sess.run(
+                        [model.train_step, model.cost_lsq, model.y_hat],
+                        feed_dict=feed_dict)
+                    if hp['rule_trains'] == ['mnist']:
+                        perf_train = np.mean(get_perf(y_hat_train, trial_train.y, rule='mnist'))
 
-                    if rich_output:
-                        display_rich_output(model, sess, step, log, model_dir)
+                        log['perf_train_mnist' + str(epoch)].append(perf_train)
+                    step += 1
 
-                # Training
-                # TODO: Winnie changed
-                if hp['rule_trains'] == ['mnist']:
-                    rule_train_now = 'mnist'
-                else:
-                    rule_train_now = hp['rng'].choice(hp['rule_trains'],
-                                                  p=hp['rule_probs'])
+                except KeyboardInterrupt:
+                    print("Optimization interrupted by user")
+                    break
 
-                # Generate a random batch of trials.
-                # Each batch has the same trial length
-                # TODO: WINNIE ADD, DELETE IF INCORRECT
-                if hp['rule_trains'] == ['mnist']:
-                    trial = generate_trials(
-                        rule_train_now, hp, 'train',
-                        batch_size=hp['batch_size_train'])
-                else:
-                    trial = generate_trials(
-                        rule_train_now, hp, 'random',
-                        batch_size=hp['batch_size_train'])
-
-                # Generating feed_dict.
-                feed_dict = tools.gen_feed_dict(model, trial, hp)
-                sess.run(model.train_step, feed_dict=feed_dict)
-
-                step += 1
-
-            except KeyboardInterrupt:
-                print("Optimization interrupted by user")
-                break
+            log['perf_vali_avg_mnist'].append(np.mean(log['perf_vali_mnist' + str(epoch)]))
+            log['perf_train_avg_mnist'].append(np.mean(log['perf_train_mnist' + str(epoch)]))
 
         print("Optimization finished!")
 
 
-def train_sequential(
-        model_dir,
-        rule_trains,
-        hp=None,
-        max_steps=1e7,
-        display_step=500,
-        ruleset='mante',
-        seed=0,
-):
-    '''Train the network sequentially.
-    Args:
-        model_dir: str, training directory
-        rule_trains: a list of list of tasks to train sequentially
-        hp: dictionary of hyperparameters
-        max_steps: int, maximum number of training steps for each list of tasks
-        display_step: int, display steps
-        ruleset: the set of rules to train
-        seed: int, random seed to be used
-    Returns:
-        model is stored at model_dir/model.ckpt
-        training configuration is stored at model_dir/hp.json
-    '''
-
-    tools.mkdir_p(model_dir)
-
-    # Network parameters
-    default_hp = get_default_hp(ruleset)
-    if hp is not None:
-        default_hp.update(hp)
-    hp = default_hp
-    hp['seed'] = seed
-    hp['rng'] = np.random.RandomState(seed)
-    hp['rule_trains'] = rule_trains
-    # Get all rules by flattening the list of lists
-    hp['rules'] = [r for rs in rule_trains for r in rs]
-
-    # Number of training iterations for each rule
-    rule_train_iters = [len(r) * max_steps for r in rule_trains]
-
-    tools.save_hp(hp, model_dir)
-    # Display hp
-    for key, val in hp.items():
-        print('{:20s} = '.format(key) + str(val))
-
-    # Using continual learning or not
-    c, ksi = hp['c_intsyn'], hp['ksi_intsyn']
-
-    # Build the model
-    model = Model(model_dir, hp=hp)
-
-    grad_unreg = tf.gradients(model.cost_lsq, model.var_list)
-
-    # Store results
-    log = defaultdict(list)
-    log['model_dir'] = model_dir
-
-    # Record time
-    t_start = time.time()
-
-    # tensorboard summaries
-    placeholders = list()
-    for v_name in ['Omega0', 'omega0', 'vdelta']:
-        for v in model.var_list:
-            placeholder = tf.placeholder(tf.float32, shape=v.shape)
-            tf.summary.histogram(v_name + '/' + v.name, placeholder)
-            placeholders.append(placeholder)
-    merged = tf.summary.merge_all()
-    test_writer = tf.summary.FileWriter(model_dir + '/tb')
-
-    def relu(x):
-        return x * (x > 0.)
-
-    # Use customized session that launches the graph as well
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-
-        # penalty on deviation from initial weight
-        if hp['l2_weight_init'] > 0:
-            raise NotImplementedError()
-
-        # Looping
-        step_total = 0
-        for i_rule_train, rule_train in enumerate(hp['rule_trains']):
-            step = 0
-
-            # At the beginning of new tasks
-            # Only if using intelligent synapses
-            v_current = sess.run(model.var_list)
-
-            if i_rule_train == 0:
-                v_anc0 = v_current
-                Omega0 = [np.zeros(v.shape, dtype='float32') for v in v_anc0]
-                omega0 = [np.zeros(v.shape, dtype='float32') for v in v_anc0]
-                v_delta = [np.zeros(v.shape, dtype='float32') for v in v_anc0]
-            elif c > 0:
-                v_anc0_prev = v_anc0
-                v_anc0 = v_current
-                v_delta = [v - v_prev for v, v_prev in zip(v_anc0, v_anc0_prev)]
-
-                # Make sure all elements in omega0 are non-negative
-                # Penalty
-                Omega0 = [relu(O + o / (v_d ** 2 + ksi))
-                          for O, o, v_d in zip(Omega0, omega0, v_delta)]
-
-                # Update cost
-                model.cost_reg = tf.constant(0.)
-                for v, w, v_val in zip(model.var_list, Omega0, v_current):
-                    model.cost_reg += c * tf.reduce_sum(
-                        tf.multiply(tf.constant(w),
-                                    tf.square(v - tf.constant(v_val))))
-                model.set_optimizer()
-
-            # Store Omega0 to tf summary
-            feed_dict = dict(zip(placeholders, Omega0 + omega0 + v_delta))
-            summary = sess.run(merged, feed_dict=feed_dict)
-            test_writer.add_summary(summary, i_rule_train)
-
-            # Reset
-            omega0 = [np.zeros(v.shape, dtype='float32') for v in v_anc0]
-
-            # Keep training until reach max iterations
-            while (step * hp['batch_size_train'] <=
-                   rule_train_iters[i_rule_train]):
-                # Validation
-                if step % display_step == 0:
-                    trial = step_total * hp['batch_size_train']
-                    log['trials'].append(trial)
-                    log['times'].append(time.time() - t_start)
-                    log['rule_now'].append(rule_train)
-                    log = do_eval(sess, model, log, rule_train)
-                    if log['perf_avg'][-1] > model.hp['target_perf']:
-                        print('Perf reached the target: {:0.2f}'.format(
-                            hp['target_perf']))
-                        break
-
-                # Training
-                rule_train_now = hp['rng'].choice(rule_train)
-                # Generate a random batch of trials.
-                # Each batch has the same trial length
-                trial = generate_trials(
-                    rule_train_now, hp, 'random',
-                    batch_size=hp['batch_size_train'])
-
-                # Generating feed_dict.
-                feed_dict = tools.gen_feed_dict(model, trial, hp)
-
-                # Continual learning with intelligent synapses
-                v_prev = v_current
-
-                # This will compute the gradient BEFORE train step
-                _, v_grad = sess.run([model.train_step, grad_unreg],
-                                     feed_dict=feed_dict)
-                # Get the weight after train step
-                v_current = sess.run(model.var_list)
-
-                # Update synaptic importance
-                omega0 = [
-                    o - (v_c - v_p) * v_g for o, v_c, v_p, v_g in
-                    zip(omega0, v_current, v_prev, v_grad)
-                ]
-
-                step += 1
-                step_total += 1
-
-        print("Optimization Finished!")
-
-
-def train_rule_only(
-        model_dir,
-        rule_trains,
-        max_steps,
-        hp=None,
-        ruleset='all',
-        seed=0,
-):
-    '''Customized training function.
-    The network sequentially but only train rule for the second set.
-    First train the network to perform tasks in group 1, then train on group 2.
-    When training group 2, only rule connections are being trained.
-    Args:
-        model_dir: str, training directory
-        rule_trains: a list of list of tasks to train sequentially
-        hp: dictionary of hyperparameters
-        max_steps: int, maximum number of training steps for each list of tasks
-        display_step: int, display steps
-        ruleset: the set of rules to train
-        seed: int, random seed to be used
-    Returns:
-        model is stored at model_dir/model.ckpt
-        training configuration is stored at model_dir/hp.json
-    '''
-
-    tools.mkdir_p(model_dir)
-
-    # Network parameters
-    default_hp = get_default_hp(ruleset)
-    if hp is not None:
-        default_hp.update(hp)
-    hp = default_hp
-    hp['seed'] = seed
-    hp['rng'] = np.random.RandomState(seed)
-    hp['rule_trains'] = rule_trains
-    # Get all rules by flattening the list of lists
-    hp['rules'] = [r for rs in rule_trains for r in rs]
-
-    # Number of training iterations for each rule
-    if hasattr(max_steps, '__iter__'):
-        rule_train_iters = max_steps
-    else:
-        rule_train_iters = [len(r) * max_steps for r in rule_trains]
-
-    tools.save_hp(hp, model_dir)
-    # Display hp
-    for key, val in hp.items():
-        print('{:20s} = '.format(key) + str(val))
-
-    # Build the model
-    model = Model(model_dir, hp=hp)
-
-    # Store results
-    log = defaultdict(list)
-    log['model_dir'] = model_dir
-
-    # Record time
-    t_start = time.time()
-
-    # Use customized session that launches the graph as well
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-
-        # penalty on deviation from initial weight
-        if hp['l2_weight_init'] > 0:
-            raise NotImplementedError()
-
-        # Looping
-        step_total = 0
-        for i_rule_train, rule_train in enumerate(hp['rule_trains']):
-            step = 0
-
-            if i_rule_train == 0:
-                display_step = 200
-            else:
-                display_step = 50
-
-            if i_rule_train > 0:
-                # var_list = [v for v in model.var_list
-                #             if ('input' in v.name) and ('rnn' not in v.name)]
-                var_list = [v for v in model.var_list if 'rule_input' in v.name]
-                model.set_optimizer(var_list=var_list)
-
-            # Keep training until reach max iterations
-            while (step * hp['batch_size_train'] <=
-                   rule_train_iters[i_rule_train]):
-                # Validation
-                if step % display_step == 0:
-                    trial = step_total * hp['batch_size_train']
-                    log['trials'].append(trial)
-                    log['times'].append(time.time() - t_start)
-                    log['rule_now'].append(rule_train)
-                    log = do_eval(sess, model, log, rule_train)
-                    if log['perf_avg'][-1] > model.hp['target_perf']:
-                        print('Perf reached the target: {:0.2f}'.format(
-                            hp['target_perf']))
-                        break
-
-                # Training
-                rule_train_now = hp['rng'].choice(rule_train)
-                # Generate a random batch of trials.
-                # Each batch has the same trial length
-                trial = generate_trials(
-                    rule_train_now, hp, 'random',
-                    batch_size=hp['batch_size_train'])
-
-                # Generating feed_dict.
-                feed_dict = tools.gen_feed_dict(model, trial, hp)
-
-                # This will compute the gradient BEFORE train step
-                _ = sess.run(model.train_step, feed_dict=feed_dict)
-
-                step += 1
-                step_total += 1
-
-        print("Optimization Finished!")
 
 
 if __name__ == '__main__':
@@ -707,16 +404,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--modeldir', type=str, default='data/debug/mnist/1')
+    parser.add_argument('--modeldir', type=str, default='data/debug/mnist/10rnn_20dt_0.5times')
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     hp = {'activation': 'softplus',
-          'n_rnn': 400,    # 20*20
+          'n_rnn': 10,    # 20*20
           # TODO: winnie changed
           'mix_rule': False,
           'l1_h': 0.,
-          'use_separate_input': True}
+          'use_separate_input': True,
+          'times': 0.5}
     train(args.modeldir,
           seed=1,
           hp=hp,

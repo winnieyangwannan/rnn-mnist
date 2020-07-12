@@ -586,13 +586,16 @@ def schematic_plot(model_dir, save_dir, rule=None):
 
 
 # TODO: winnie added
-def schematic_plot_mnist(model_dir, save_dir, rule=None):
+def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
     fontsize = 6
+    cmap = 'Purples'
 
-    rule = rule or 'dm1'
+
+    #rule = rule or 'dm1'
 
     model = Model(model_dir, dt=1)
     hp = model.hp
+    hp['batch_size_test'] = 40
 
     with tf.Session() as sess:
         model.restore()
@@ -611,20 +614,18 @@ def schematic_plot_mnist(model_dir, save_dir, rule=None):
         n_hidden = hp['n_rnn']
 
         # Plot stimulus
-        for i in range(hp['batch_size_test']):
-            plt.figure()
-            test_img = x[int((hp['test_stim_off'][0]-1) / hp['dt']), i, 1:-1].reshape(28, -1)
-            plt.imshow(test_img, cmap='Greys')
-            plt.title('Stimulus', fontsize=fontsize, y=0.9)
-            plt.savefig(save_dir + 'schematic_stimulus_mnist_' + str(i)+ '_.pdf', transparent=True)
-            plt.show()
-        plt.close('all')
+       # for i in range(hp['batch_size_test']):
+        #    plt.figure()
+         #   test_img = x[int(999 / hp['dt']), i, 1:-1].reshape(28, -1)
+          #  plt.imshow(test_img)
+           # plt.savefig(save_dir + 'schematic_stimulus_mnist_' + str(i)+ '_.pdf', transparent=True)
+            #plt.show()
+        #plt.close('all')
 
         # Plot Units
         for i in range(hp['batch_size_test']):
             fig = plt.figure(figsize=(1.0, 0.8))
             ax = fig.add_axes([0.2,0.1,0.7,0.75])
-            cmap = 'Purples'
             plt.xticks([])
             # Fixed style for these plots
             ax.tick_params(axis='both', which='major', labelsize=fontsize,
@@ -638,59 +639,61 @@ def schematic_plot_mnist(model_dir, save_dir, rule=None):
 
             plt.imshow(h[:, i, :].T, aspect='auto', cmap=cmap, vmin=0, vmax=1,
                       interpolation='none',origin='lower')
-            plt.yticks([0,n_hidden-1],['1',str(n_hidden)],rotation='vertical')
+            plt.yticks([0,n_hidden-1],['1',str(n_hidden)],rotation='horizontal')
             plt.title('Recurrent units', fontsize=fontsize, y=0.95)
             ax.get_yaxis().set_label_coords(-0.12,0.5)
             plt.savefig(save_dir + 'schematic_units_mnist' + str(i) + '_.pdf', transparent=True)
             plt.show()
         plt.close('all')
 
-        # Plot Outputs
+        # Plot input and output
         # TODO: WIinnie added
 
         for ii in range(hp['batch_size_test']):
-            fig = plt.figure(figsize=(1.0, 1.2))
-            heights = np.array([0.06, 0.25, 0.25])
-            #heights = np.array([0.1,0.45])+0.01
+            fig = plt.figure(figsize=(1, 2))
+            heights = np.array([0.2, 0.2, 0.2])
             for i in range(3):
-                ax = fig.add_axes([0.2, sum(heights[i+1:]+0.15)+0.1, 0.7, heights[i]])
-                cmap = 'Purples'
+                ax = fig.add_axes([0.2, sum(heights[i+1:]+0.08)+0.15, 0.5, heights[i]])
                 plt.xticks([])
 
                 # Fixed style for these plots
                 ax.tick_params(axis='both', which='major', labelsize=fontsize,
                                width=0.5, length=2, pad=3)
-                ax.spines["left"].set_linewidth(0.5)
-                ax.spines["right"].set_visible(False)
+                ax.spines["right"].set_linewidth(0.5)
+                ax.spines["left"].set_visible(False)
                 ax.spines["bottom"].set_visible(False)
                 ax.spines["top"].set_visible(False)
                 ax.xaxis.set_ticks_position('bottom')
-                ax.yaxis.set_ticks_position('left')
+                ax.yaxis.set_ticks_position('right')
 
                 if i == 0:
-                    plt.plot(y_hat[:,ii,0],color='xkcd:blue')
-                    plt.yticks([0.05,0.8],['',''],rotation='vertical')
-                    plt.ylim([-0.1,1.1])
-                    plt.title('Fixation output', fontsize=fontsize, y=0.9)
+                    # TODO: need to change when to plot
+                     test_img = x[int(plot_time / hp['dt']), ii, 1:-1].reshape(28, -1)
+                     plt.imshow(test_img, cmap=cmap)
+                     plt.title('Input', fontsize=fontsize, y=0.9)
+                     ax.spines["right"].set_visible(False)
+                     plt.yticks([])
+                     plt.xticks([])
+
+
 
                 elif i == 1:
                     plt.imshow(y_hat[:,ii,1:].T, aspect='auto', cmap=cmap,
                                vmin=0, vmax=1, interpolation='none', origin='lower')
-                    #plt.yticks(np.arange(0,10), labels=None,
-                     #          rotation='vertical')
-
-                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', ''], rotation='vertical')
+                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
                     plt.xticks([])
                     plt.title('Response', fontsize=fontsize, y=0.9)
 
                 elif i == 2:
                     plt.imshow(y[:, ii, 1:].T, aspect='auto', cmap=cmap,
                                vmin=0, vmax=1, interpolation='none', origin='lower')
-                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', ''], rotation='vertical')
-                    plt.xticks([])
+                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
+                    plt.xticks([0, len(y[:, ii, 1:])], [0, len(y[:, ii, 1:])/1000])
+                    plt.xlabel('duration(s)')
                     plt.title('Target', fontsize=fontsize, y=0.9)
+                    ax.spines["bottom"].set_visible(True)
 
-                ax.get_yaxis().set_label_coords(-0.12,0.5)
+
 
             plt.savefig(save_dir + 'schematic_outputs_mnist' + str(ii) + '_.pdf', transparent=True)
             plt.show()

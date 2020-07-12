@@ -1627,13 +1627,13 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
             rule_strength = [1.] * len(rule)
 
     # TODO: Winnie added
-    if rule == ['mnist']:
-        trial.add_rule(on=0, off=-1, strength=1)
-    else:
-        for r, s in zip(rule, rule_strength):
-            trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
+    #if rule == ['mnist']:
+     #   trial.add_rule(on=0, off=-1, strength=1)
+    #else:
+     #   for r, s in zip(rule, rule_strength):
+      #      trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
 
-        if noise_on:
-            trial.add_x_noise()
+    #if noise_on:
+     #   trial.add_x_noise()
 
     return trial

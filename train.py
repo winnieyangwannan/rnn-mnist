@@ -36,7 +36,7 @@ def get_default_hp(ruleset):
     #TODO: Winnie changed
     if ruleset == 'mnist':
         n_input, n_output = 1 + n_rule + 784, 10+1
-        batch_size_train = 600
+        batch_size_train = 60
         batch_size_test = 400
         batch_size_vali = 60
 
@@ -70,7 +70,7 @@ def get_default_hp(ruleset):
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
-        'dt': 20,
+        'dt': 1,
         # discretization time step/time constant
         'alpha': 0.2,
         # recurrent noise
@@ -538,17 +538,7 @@ def train_sequential(
             # Keep training until reach max iterations
             while (step * hp['batch_size_train'] <=
                    rule_train_iters[i_rule_train]):
-                # Validation
-                if step % display_step == 0:
-                    trial = step_total * hp['batch_size_train']
-                    log['trials'].append(trial)
-                    log['times'].append(time.time() - t_start)
-                    log['rule_now'].append(rule_train)
-                    log = do_eval(sess, model, log, rule_train)
-                    if log['perf_avg'][-1] > model.hp['target_perf']:
-                        print('Perf reached the target: {:0.2f}'.format(
-                            hp['target_perf']))
-                        break
+
 
                 # Training
                 rule_train_now = hp['rng'].choice(rule_train)
@@ -565,7 +555,7 @@ def train_sequential(
                 v_prev = v_current
 
                 # This will compute the gradient BEFORE train step
-                _, v_grad = sess.run([model.train_step, grad_unreg],
+                _, v_grad = sess.run([model.train_step, grad_unreg, ],
                                      feed_dict=feed_dict)
                 # Get the weight after train step
                 v_current = sess.run(model.var_list)
@@ -575,6 +565,18 @@ def train_sequential(
                     o - (v_c - v_p) * v_g for o, v_c, v_p, v_g in
                     zip(omega0, v_current, v_prev, v_grad)
                 ]
+
+                # Validation
+                if step % display_step == 0:
+                    trial = step_total * hp['batch_size_train']
+                    log['trials'].append(trial)
+                    log['times'].append(time.time() - t_start)
+                    log['rule_now'].append(rule_train)
+                    log = do_eval(sess, model, log, rule_train)
+                    if log['perf_avg'][-1] > model.hp['target_perf']:
+                        print('Perf reached the target: {:0.2f}'.format(
+                            hp['target_perf']))
+                        break
 
                 step += 1
                 step_total += 1

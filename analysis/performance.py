@@ -59,48 +59,45 @@ BLUES = [np.array([0.13333333, 0.13333333, 0.13333333, 1.        ]),
          np.array([0.58431373, 0.81568627, 0.98823529, 1.        ])]
 
 
-def plot_performanceprogress_mnist(model_dir, save_dir, rule_plot=None):
+def plot_performanceprogress_mnist(model_dir, save_dir, rule_plot=None, type='average'):
     # Plot Training Progress
     log = tools.load_log(model_dir)
     hp = tools.load_hp(model_dir)
 
-    trials = log['trials']
-
     fs = 6 # fontsize
     fig = plt.figure(figsize=(3.5,1.2))
     ax = fig.add_axes([0.1,0.25,0.35,0.6])
-    lines = list()
-    labels = list()
 
-    # what does this do
-    x_plot = np.array(trials)/hp['display_step']
     if rule_plot == None:
         rule_plot = hp['rules']
 
     for i, rule in enumerate(rule_plot):
-        # line = ax1.plot(x_plot, np.log10(cost_tests[rule]),color=color_rules[i%26])
-        # ax2.plot(x_plot, perf_tests[rule],color=color_rules[i%26])
-        line = ax.plot(x_plot, np.log10(log['cost_'+rule]),
-                       color=rule_color[rule])
-        ax.plot(x_plot, log['perf_'+rule], color=rule_color[rule])
-        lines.append(line[0])
-        labels.append(rule_name[rule])
+
+        if type == 'average':
+            ax.plot(log['perf_train_avg_mnist'], color=rule_color[rule], label='train')
+            ax.plot(log['perf_vali_avg_mnist'], color='Orange', label='validation')
+            ax.set_xlabel('epochs', fontsize=fs, labelpad=2)
+            ax.set_xticks(np.arange(0, 25, 5))
+        else:
+            ax.plot(log['perf_train_mnist0'], color=rule_color[rule], label='train')
+            ax.plot(log['perf_vali_mnist0'], color='Orange', label='validation')
+            ax.set_xlabel('trials', fontsize=fs, labelpad=2)
+            ax.set_xticks([0, 500, 1000])
+            ax.set_xticklabels([0, 500*60, 1000*60])
+
+
+    ax.set_yticks(np.arange(0, 1.2, 0.2))
 
     ax.tick_params(axis='both', which='major', labelsize=fs)
-
-    ax.set_ylim([0, 1])
-    ax.set_xlabel('Total trials (1,000)',fontsize=fs, labelpad=2)
     ax.set_ylabel('Performance',fontsize=fs, labelpad=0)
     ax.locator_params(axis='x', nbins=3)
-    ax.set_yticks([0,1])
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
-    lg = fig.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.47,0.5),
-                    fontsize=fs,labelspacing=0.3,loc=6,frameon=False)
-    plt.setp(lg.get_title(),fontsize=fs)
-    plt.savefig(save_dir + 'Performance_Progresss.pdf', transparent=True)
+    ax.legend(ncol=1,bbox_to_anchor=(1,0.5),
+                    fontsize=fs,loc=6,frameon=False)
+    plt.savefig(save_dir + type + '_Performance_Progresss.pdf', transparent=True)
     plt.show()
 
 
