@@ -56,7 +56,7 @@ def tf_popvec(y):
     return tf.mod(loc, 2 * np.pi)
 
 
-def get_perf(y_hat, y_loc, rule = None):
+def get_perf(y_hat, y_loc, hp, rule = None):
     """Get performance.
     Args:
       y_hat: Actual output. Numpy array (Time, Batch, Unit)
@@ -68,9 +68,13 @@ def get_perf(y_hat, y_loc, rule = None):
     if len(y_hat.shape) != 3:
         raise ValueError('y_hat must have shape (Time, Batch, Unit)')
 
-    # Only look at last time points
-    y_loc = y_loc[-1]    # target y
-    y_hat = y_hat[-1]    # NN y
+    # Only look at last time points before off
+    # TODO: Winnie changed
+
+    off = hp['off']
+
+    y_loc = y_loc[off]    # target y
+    y_hat = y_hat[off]    # NN y
 
     # Fixation and location of y_hat
     #y_hat_fix = y_hat[..., 0]  # NN fix

@@ -18,15 +18,15 @@ from analysis import contextdm_analysis
 from analysis import posttrain_analysis
 
 root_dir = './data/mnist'
-model_dir = root_dir + '/2x_time'
-save_dir = './figure/mnist/2x_time/'
+model_dir = root_dir + '/20rnn_20dt_0.5times_end'
+save_dir = './figure/mnist/20rnn_20dt_0.5times_end/'
 tools.mkdir_p(save_dir)
 
 # # Performance Analysis-----------------------------------------------------
 
 
 
-#standard_analysis.schematic_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_time=999,rule='mnist')
+standard_analysis.schematic_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_time=499,rule='mnist')
 
 performance.plot_performanceprogress_mnist(model_dir, save_dir=save_dir, rule_plot=['mnist'], type='0')
 

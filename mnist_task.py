@@ -61,10 +61,10 @@ def _mnist(config, mode, **kwargs):
         y_test = tf.keras.utils.to_categorical(y_test)
 
         # Time of stimuluss on/off
-        stim_on = int(rng.uniform(100*times,400*times)/dt)
+        stim_on = int(400*times/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([400*times, 800*times])/dt)
+        stim_dur = int(rng.choice([600*times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
         tdim = stim_on+stim_dur+int(500*times/dt)
@@ -73,19 +73,17 @@ def _mnist(config, mode, **kwargs):
         target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
 
 
-
     elif mode == 'train':
         # TODO: change test length here later
         batch_size = config['batch_size_train']
-        y_train = tf.keras.utils.to_categorical(y_train) # from label to one hot encoding
+        y_train = tf.keras.utils.to_categorical(y_train)
 
         # Time of stimuluss on/off
-        stim_on = int(rng.uniform(100*times,400*times)/dt)
+        stim_on = int(400*times/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([400*times, 800*times])/dt)
+        stim_dur = int(rng.choice([600*times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
-
         # each batch consists of sequences of equal length
         tdim = stim_on+stim_dur+int(500*times/dt)
 
@@ -153,7 +151,6 @@ class Trial_mnist(object):
         self.n_eachring = self.config['n_eachring']
         self.n_input = self.config['n_input']
         self.n_output = self.config['n_output']
-        #self.pref = np.arange(0, 2 * np.pi, 2 * np.pi / self.n_eachring)  # preferences
 
         self.batch_size = int(batch_size)
         self.tdim = int(tdim)
@@ -207,8 +204,13 @@ class Trial_mnist(object):
             elif loc_type == 'out':
                 if self.config['loss_type'] == 'lsq':
                     target = targets[i, :] # curreng batch
-                    target = np.tile(target, (len(self.y) - offs[i], 1))
-                    self.y[offs[i]:, i, :] += target
+                    if self.config['off'] == -1:
+                        target = np.tile(target, (len(self.y) - offs[i], 1))
+                        self.y[offs[i]:, i, :] += target
+                    else:
+                        target = np.tile(target, (offs[i]-ons[i], 1))
+                        self.y[ons[i]:offs[i], i, :] += target
+
             else:
                 raise ValueError('Unknown loc_type')
 

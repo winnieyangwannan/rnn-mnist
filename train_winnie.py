@@ -40,12 +40,12 @@ def get_default_hp(ruleset):
         batch_size_test = 40
         batch_size_vali = 10
 
-        EPOCHS = 20
+
     else:
         n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
         batch_size_train = 64
         batch_size_test = 512
-        EPOCHS = 1
+
 
 
     hp = {
@@ -70,7 +70,7 @@ def get_default_hp(ruleset):
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
-        'dt': 20,
+        #'dt': 20,
         # discretization time step/time constant
         'alpha': 0.2,
         # recurrent noise
@@ -115,14 +115,12 @@ def get_default_hp(ruleset):
         'learning_rate': 0.001,
         # intelligent synapses parameters, tuple (c, ksi)
         'c_intsyn': 0,
-        'ksi_intsyn': 0,
+        'ksi_intsyn': 0
         # TODO: WINNIE ADDED
-        'EPOCHS': EPOCHS
-
-    }
+        #'EPOCHS': EPOCHS
+        }
 
     return hp
-
 
 def do_eval(sess, model, log, rule_train, epoch):
     """Do evaluation.
@@ -162,9 +160,9 @@ def do_eval(sess, model, log, rule_train, epoch):
             # We did the averaging over time through c_mask
             # TODO: winnie changed
             if rule_train == ['mnist']:
-                perf_test = np.mean(get_perf(y_hat_test, trial.y, rule='mnist'))
+                perf_test = np.mean(get_perf(y_hat_test, trial.y, hp, rule='mnist'))
             else:
-                perf_test = np.mean(get_perf(y_hat_test, trial.y_loc))
+                perf_test = np.mean(get_perf(y_hat_test, trial.y_loc, hp))
 
             clsq_tmp.append(c_lsq)
             creg_tmp.append(c_reg)
@@ -380,7 +378,7 @@ def train(model_dir,
                         [model.train_step, model.cost_lsq, model.y_hat],
                         feed_dict=feed_dict)
                     if hp['rule_trains'] == ['mnist']:
-                        perf_train = np.mean(get_perf(y_hat_train, trial_train.y, rule='mnist'))
+                        perf_train = np.mean(get_perf(y_hat_train, trial_train.y, hp, rule='mnist'))
 
                         log['perf_train_mnist' + str(epoch)].append(perf_train)
                     step += 1
@@ -404,17 +402,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--modeldir', type=str, default='data/debug/mnist/10rnn_20dt_0.5times')
+    parser.add_argument('--modeldir', type=str, default='data/debug/mnist/20rnn_20dt_0.5times_end')
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     hp = {'activation': 'softplus',
-          'n_rnn': 10,    # 20*20
           # TODO: winnie changed
           'mix_rule': False,
           'l1_h': 0.,
           'use_separate_input': True,
-          'times': 0.5}
+
+          'EPOCHS': 1,
+          'n_rnn': 20,  # 20*20
+          'dt': 20,
+          'times': 0.5,
+          'off': -1,   # when should output be turned off # hp['off'] = int((1000 * hp['times']) / hp['dt'] - 1)
+          }
     train(args.modeldir,
           seed=1,
           hp=hp,

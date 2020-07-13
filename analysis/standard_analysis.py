@@ -610,17 +610,9 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
         y = trial.y
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
 
-        n_eachring = hp['n_eachring']
+        #n_eachring = hp['n_eachring']
         n_hidden = hp['n_rnn']
 
-        # Plot stimulus
-       # for i in range(hp['batch_size_test']):
-        #    plt.figure()
-         #   test_img = x[int(999 / hp['dt']), i, 1:-1].reshape(28, -1)
-          #  plt.imshow(test_img)
-           # plt.savefig(save_dir + 'schematic_stimulus_mnist_' + str(i)+ '_.pdf', transparent=True)
-            #plt.show()
-        #plt.close('all')
 
         # Plot Units
         for i in range(hp['batch_size_test']):
@@ -668,7 +660,7 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
 
                 if i == 0:
                     # TODO: need to change when to plot
-                     test_img = x[int(plot_time / hp['dt']), ii, 1:-1].reshape(28, -1)
+                     test_img = x[int(plot_time / hp['dt']), ii, :].reshape(28, -1)
                      plt.imshow(test_img, cmap=cmap)
                      plt.title('Input', fontsize=fontsize, y=0.9)
                      ax.spines["right"].set_visible(False)
@@ -678,14 +670,14 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
 
 
                 elif i == 1:
-                    plt.imshow(y_hat[:,ii,1:].T, aspect='auto', cmap=cmap,
+                    plt.imshow(y_hat[:,ii,:].T, aspect='auto', cmap=cmap,
                                vmin=0, vmax=1, interpolation='none', origin='lower')
                     plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
                     plt.xticks([])
                     plt.title('Response', fontsize=fontsize, y=0.9)
 
                 elif i == 2:
-                    plt.imshow(y[:, ii, 1:].T, aspect='auto', cmap=cmap,
+                    plt.imshow(y[:, ii, :].T, aspect='auto', cmap=cmap,
                                vmin=0, vmax=1, interpolation='none', origin='lower')
                     plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
                     plt.xticks([0, len(y[:, ii, 1:])], [0, len(y[:, ii, 1:])/1000])
