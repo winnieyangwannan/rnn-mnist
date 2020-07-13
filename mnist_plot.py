@@ -26,11 +26,11 @@ tools.mkdir_p(save_dir)
 
 
 
-standard_analysis.schematic_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_time=499,rule='mnist')
+#standard_analysis.schematic_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_time=499,rule='mnist')
 
-performance.plot_performanceprogress_mnist(model_dir, save_dir=save_dir, rule_plot=['mnist'], type='0')
+#performance.plot_performanceprogress_mnist(model_dir, save_dir=save_dir, rule_plot=['mnist'], type='0')
 
-standard_analysis.activation_patter_plot_mnist(model_dir=model_dir, save_dir=save_dir)
+#standard_analysis.activation_patter_plot_mnist(model_dir=model_dir, save_dir=save_dir)
 
 standard_analysis.pretty_singleneuron_plot_mnist(model_dir=model_dir, save_dir=save_dir, plot_type='plot_average')
 

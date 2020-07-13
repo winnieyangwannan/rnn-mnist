@@ -13,6 +13,200 @@ from matplotlib.pyplot import *
 from mnist_task import *
 import matplotlib.pylab as pl
 
+def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
+    """Plot the activity of a single neuron in time across many trials
+
+    Args:
+        model_dir:
+        rules: rules to plot
+        neurons: indices of neurons to plot
+        epoch: epoch to plot
+        save: save figure?
+        ylabel_firstonly: if True, only plot ylabel for the first rule in rules
+    """
+
+    model = Model(model_dir)
+    hp = model.hp
+    # TODO: change later
+    hp['off'] = -1
+    colors = pl.cm.RdPu(np.linspace(0, 1, 10))
+
+    with tf.Session() as sess:
+        model.restore()
+
+        t_start = int(500/hp['dt'])
+
+        # Generate a batch of trial from the test mode
+        hp['current_step'] = 0
+        hp['batch_size_test'] = 400
+
+        _, x_test, _, y_test = load_mnist_data()
+        x_test = x_test[0:400]
+        y_test = y_test[0:400]
+
+        trial = generate_trials('mnist', hp, mode='test')
+        feed_dict = tools.gen_feed_dict(model, trial, hp)
+        h, y, y_hat = sess.run([model.h, model.y, model.y_hat], feed_dict=feed_dict)
+
+        #indexes_test = index_each_category(y[-1][:,1:],max_num=1.05)
+        #indexes_test['0']
+
+
+    fig = plt.figure(figsize=(6, 6))
+    for u in range(hp['n_rnn']):
+        ax = fig.add_subplot(4, 5, u + 1)
+        #t_plot = np.arange(h[:].shape[0]) * hp['dt'] / 1000  # CHANGE LATER
+
+        if plot_type == 'plot_all':
+            for i in range(10):
+                _, plot_indexs = filter_digit(x_test, y_test, i)
+                #plot_indexs = indexes_test[str(i)][0]
+                for ii in plot_indexs:
+                    ax.plot(h[:, ii, u], lw=0.5, c=colors[i])
+
+        # Plot stimulus averaged trace
+        if plot_type == 'plot_average':
+           for i in range(10):
+               _, plot_indexs = filter_digit(x_test, y_test, i)
+               ax.plot(h[:, plot_indexs,  u].mean(axis=1), lw=1, c=colors[i])
+
+        fs = 6
+        ax.tick_params(axis='both', which='major', labelsize=fs)
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+
+
+        ax.set_xlabel('Time (s)', fontsize=fs)
+        ax.set_ylabel('')
+
+        ax.set_xticks([0, len(h)])
+        ax.set_xticklabels([0, len(h) * hp['dt'] / 1000])
+        ax.set_yticks([0, np.round(np.max(h[t_start:, :, u]), 2)])
+        ax.set_title('')
+
+
+        if plot_type == 'plot_average':
+            fig.savefig(save_dir + '_single_unit_average.pdf')
+        else:
+            fig.savefig(save_dir + '_single_unit_all_trials.pdf')
+
+        plt.tight_layout()
+        fig.show()
+
+
+
+# TODO: winnie added
+def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
+    fontsize = 6
+    cmap = 'Purples'
+
+
+    #rule = rule or 'dm1'
+
+    model = Model(model_dir, dt=1)
+    hp = model.hp
+    hp['batch_size_test'] = 40
+
+    with tf.Session() as sess:
+        model.restore()
+
+        # TODO: winnie add
+        hp['current_step'] = hp['seed']
+
+        trial = generate_trials(rule, hp, mode='test')
+        feed_dict = tools.gen_feed_dict(model, trial, hp)
+        x = trial.x
+        # TODO: Winnie added
+        y = trial.y
+        h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
+
+        #n_eachring = hp['n_eachring']
+        n_hidden = hp['n_rnn']
+
+
+        # Plot Units
+        for i in range(hp['batch_size_test']):
+            fig = plt.figure(figsize=(1.0, 0.8))
+            ax = fig.add_axes([0.2, 0.1, 0.7, 0.75])
+            plt.xticks([])
+            # Fixed style for these plots
+            ax.tick_params(axis='both', which='major', labelsize=fontsize,
+                           width=0.5, length=2, pad=3)
+            ax.spines["left"].set_linewidth(0.5)
+            ax.spines["right"].set_visible(False)
+            ax.spines["bottom"].set_visible(False)
+            ax.spines["top"].set_visible(False)
+            ax.xaxis.set_ticks_position('bottom')
+            ax.yaxis.set_ticks_position('left')
+
+            plt.imshow(h[:, i, :].T, aspect='auto', cmap=cmap, vmin=0, vmax=1,
+                      interpolation='none', origin='lower')
+            plt.yticks([0, n_hidden-1], ['1', str(n_hidden)], rotation='horizontal')
+            plt.title('Recurrent units', fontsize=fontsize, y=0.95)
+            ax.get_yaxis().set_label_coords(-0.12, 0.5)
+            plt.savefig(save_dir + 'schematic_units_mnist' + str(i) + '_.pdf', transparent=True)
+            plt.show()
+        plt.close('all')
+
+        # Plot input and output
+        # TODO: WIinnie added
+
+        for ii in range(hp['batch_size_test']):
+            fig = plt.figure(figsize=(1, 2))
+            heights = np.array([0.2, 0.2, 0.2])
+            for i in range(3):
+                ax = fig.add_axes([0.2, sum(heights[i+1:]+0.08)+0.15, 0.5, heights[i]])
+                plt.xticks([])
+
+                # Fixed style for these plots
+                ax.tick_params(axis='both', which='major', labelsize=fontsize,
+                               width=0.5, length=2, pad=3)
+                ax.spines["right"].set_linewidth(0.5)
+                ax.spines["left"].set_visible(False)
+                ax.spines["bottom"].set_visible(False)
+                ax.spines["top"].set_visible(False)
+                ax.xaxis.set_ticks_position('bottom')
+                ax.yaxis.set_ticks_position('right')
+
+                if i == 0:
+                    # TODO: need to change when to plot
+                     test_img = x[int(plot_time / hp['dt']), ii, :].reshape(28, -1)
+                     plt.imshow(test_img, cmap=cmap)
+                     plt.title('Input', fontsize=fontsize, y=0.9)
+                     ax.spines["right"].set_visible(False)
+                     plt.yticks([])
+                     plt.xticks([])
+
+
+
+                elif i == 1:
+                    plt.imshow(y_hat[:,ii,:].T, aspect='auto', cmap=cmap,
+                               vmin=0, vmax=1, interpolation='none', origin='lower')
+                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
+                    plt.xticks([])
+                    plt.title('Response', fontsize=fontsize, y=0.9)
+
+                elif i == 2:
+                    plt.imshow(y[:, ii, :].T, aspect='auto', cmap=cmap,
+                               vmin=0, vmax=1, interpolation='none', origin='lower')
+                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
+                    plt.xticks([0, len(y[:, ii, 1:])], [0, len(y[:, ii, 1:])/1000])
+                    plt.xlabel('duration(s)')
+                    plt.title('Target', fontsize=fontsize, y=0.9)
+                    ax.spines["bottom"].set_visible(True)
+
+
+
+            plt.savefig(save_dir + 'schematic_outputs_mnist' + str(ii) + '_.pdf', transparent=True)
+            plt.show()
+        plt.close('all')
+
+
+
+
+
 def easy_activity_plot(model_dir, rule):
     """A simple plot of neural activity from one task.
 
@@ -219,7 +413,7 @@ def activation_patter_plot_mnist(model_dir, save_dir):
 
 
 # TODO: winnie added
-def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
+def pretty_singleneuron_plot_mnist_old(model_dir,save_dir, plot_type):
     """Plot the activity of a single neuron in time across many trials
 
     Args:
@@ -583,114 +777,6 @@ def schematic_plot(model_dir, save_dir, rule=None):
 
     plt.savefig(save_dir + 'schematic_outputs.pdf', transparent=True)
     plt.show()
-
-
-# TODO: winnie added
-def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
-    fontsize = 6
-    cmap = 'Purples'
-
-
-    #rule = rule or 'dm1'
-
-    model = Model(model_dir, dt=1)
-    hp = model.hp
-    hp['batch_size_test'] = 40
-
-    with tf.Session() as sess:
-        model.restore()
-
-        # TODO: winnie add
-        hp['current_step'] = hp['seed']
-
-        trial = generate_trials(rule, hp, mode='test')
-        feed_dict = tools.gen_feed_dict(model, trial, hp)
-        x = trial.x
-        # TODO: Winnie added
-        y = trial.y
-        h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
-
-        #n_eachring = hp['n_eachring']
-        n_hidden = hp['n_rnn']
-
-
-        # Plot Units
-        for i in range(hp['batch_size_test']):
-            fig = plt.figure(figsize=(1.0, 0.8))
-            ax = fig.add_axes([0.2,0.1,0.7,0.75])
-            plt.xticks([])
-            # Fixed style for these plots
-            ax.tick_params(axis='both', which='major', labelsize=fontsize,
-                           width=0.5, length=2, pad=3)
-            ax.spines["left"].set_linewidth(0.5)
-            ax.spines["right"].set_visible(False)
-            ax.spines["bottom"].set_visible(False)
-            ax.spines["top"].set_visible(False)
-            ax.xaxis.set_ticks_position('bottom')
-            ax.yaxis.set_ticks_position('left')
-
-            plt.imshow(h[:, i, :].T, aspect='auto', cmap=cmap, vmin=0, vmax=1,
-                      interpolation='none',origin='lower')
-            plt.yticks([0,n_hidden-1],['1',str(n_hidden)],rotation='horizontal')
-            plt.title('Recurrent units', fontsize=fontsize, y=0.95)
-            ax.get_yaxis().set_label_coords(-0.12,0.5)
-            plt.savefig(save_dir + 'schematic_units_mnist' + str(i) + '_.pdf', transparent=True)
-            plt.show()
-        plt.close('all')
-
-        # Plot input and output
-        # TODO: WIinnie added
-
-        for ii in range(hp['batch_size_test']):
-            fig = plt.figure(figsize=(1, 2))
-            heights = np.array([0.2, 0.2, 0.2])
-            for i in range(3):
-                ax = fig.add_axes([0.2, sum(heights[i+1:]+0.08)+0.15, 0.5, heights[i]])
-                plt.xticks([])
-
-                # Fixed style for these plots
-                ax.tick_params(axis='both', which='major', labelsize=fontsize,
-                               width=0.5, length=2, pad=3)
-                ax.spines["right"].set_linewidth(0.5)
-                ax.spines["left"].set_visible(False)
-                ax.spines["bottom"].set_visible(False)
-                ax.spines["top"].set_visible(False)
-                ax.xaxis.set_ticks_position('bottom')
-                ax.yaxis.set_ticks_position('right')
-
-                if i == 0:
-                    # TODO: need to change when to plot
-                     test_img = x[int(plot_time / hp['dt']), ii, :].reshape(28, -1)
-                     plt.imshow(test_img, cmap=cmap)
-                     plt.title('Input', fontsize=fontsize, y=0.9)
-                     ax.spines["right"].set_visible(False)
-                     plt.yticks([])
-                     plt.xticks([])
-
-
-
-                elif i == 1:
-                    plt.imshow(y_hat[:,ii,:].T, aspect='auto', cmap=cmap,
-                               vmin=0, vmax=1, interpolation='none', origin='lower')
-                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
-                    plt.xticks([])
-                    plt.title('Response', fontsize=fontsize, y=0.9)
-
-                elif i == 2:
-                    plt.imshow(y[:, ii, :].T, aspect='auto', cmap=cmap,
-                               vmin=0, vmax=1, interpolation='none', origin='lower')
-                    plt.yticks(np.arange(0, 10), [0, '', '', '', '', 5, '', '', '', 9], rotation='horizontal')
-                    plt.xticks([0, len(y[:, ii, 1:])], [0, len(y[:, ii, 1:])/1000])
-                    plt.xlabel('duration(s)')
-                    plt.title('Target', fontsize=fontsize, y=0.9)
-                    ax.spines["bottom"].set_visible(True)
-
-
-
-            plt.savefig(save_dir + 'schematic_outputs_mnist' + str(ii) + '_.pdf', transparent=True)
-            plt.show()
-        plt.close('all')
-
 
 def networkx_illustration(model_dir):
     import networkx as nx

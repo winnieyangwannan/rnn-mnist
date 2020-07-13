@@ -12,6 +12,13 @@ model_dir = root_dir + '/1'
 save_dir = './figure/mnist/1/'
 
 
+fig = plt.figure(figsize=(6, 6))
+for u in range(20):
+    ax = fig.add_subplot(4, 5, u + 1)
+    ax.plot(np.arange(10))
+plt.tight_layout()
+plt.savefig(save_dir +'_try.pdf')
+plt.show()
 
 fig = plt.figure(figsize=(1, 2))
 heights = np.array([0.2, 0.2, 0.2])

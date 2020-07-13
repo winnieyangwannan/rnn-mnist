@@ -203,7 +203,7 @@ class Trial_mnist(object):
                 #    self.y[ons[i]: offs[i], i, 0] = 1.0
             elif loc_type == 'out':
                 if self.config['loss_type'] == 'lsq':
-                    target = targets[i, :] # curreng batch
+                    target = targets[i, :]  # curreng batch
                     if self.config['off'] == -1:
                         target = np.tile(target, (len(self.y) - offs[i], 1))
                         self.y[offs[i]:, i, :] += target
