@@ -29,7 +29,7 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
     hp = model.hp
     # TODO: change later
     hp['off'] = -1
-    colors = pl.cm.RdPu(np.linspace(0, 1, 10))
+    colors = pl.cm.tab10(np.arange(0, 10))
 
     with tf.Session() as sess:
         model.restore()
@@ -38,11 +38,12 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
 
         # Generate a batch of trial from the test mode
         hp['current_step'] = 0
-        hp['batch_size_test'] = 400
+        plot_batch_size = 1000
+        hp['batch_size_test'] = plot_batch_size
 
         _, x_test, _, y_test = load_mnist_data()
-        x_test = x_test[0:400]
-        y_test = y_test[0:400]
+        x_test = x_test[0:plot_batch_size]
+        y_test = y_test[0:plot_batch_size]
 
         trial = generate_trials('mnist', hp, mode='test')
         feed_dict = tools.gen_feed_dict(model, trial, hp)
@@ -51,6 +52,8 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
         #indexes_test = index_each_category(y[-1][:,1:],max_num=1.05)
         #indexes_test['0']
 
+    stim_on = int(400 / hp['dt'])
+    stim_off = int((400 + 600 * hp['stim_times']) / hp['dt'])
 
     fig = plt.figure(figsize=(6, 6))
     for u in range(hp['n_rnn']):
@@ -66,9 +69,13 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
 
         # Plot stimulus averaged trace
         if plot_type == 'plot_average':
+            # plot shaded area between stim on ad stim off
+           ax.axvspan(stim_on, stim_off, color='Lavender', alpha=0.5, edgecolor='None')
+
            for i in range(10):
                _, plot_indexs = filter_digit(x_test, y_test, i)
-               ax.plot(h[:, plot_indexs,  u].mean(axis=1), lw=1, c=colors[i])
+               ax.plot(h[:, plot_indexs,  u].mean(axis=1), lw=1, c=colors[i], label=str(i))
+
 
         fs = 6
         ax.tick_params(axis='both', which='major', labelsize=fs)
@@ -85,25 +92,69 @@ def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
         ax.set_xticklabels([0, len(h) * hp['dt'] / 1000])
         ax.set_yticks([0, np.round(np.max(h[t_start:, :, u]), 2)])
         ax.set_title('')
-
+        plt.legend(ncol=2)
 
         if plot_type == 'plot_average':
-            fig.savefig(save_dir + '_single_unit_average.pdf')
+            fig.savefig(save_dir + 'hidden_single_unit_average.pdf')
         else:
-            fig.savefig(save_dir + '_single_unit_all_trials.pdf')
+            fig.savefig(save_dir + 'hidden_single_unit_all_trials.pdf')
+
 
         plt.tight_layout()
         fig.show()
 
+    # plot output layer unit
+    fig = plt.figure(figsize=(6, 3))
+    for u in range(10):
+        ax = fig.add_subplot(2, 5, u + 1)
+        fs = 6
+        ax.tick_params(axis='both', which='major', labelsize=fs)
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.xaxis.set_ticks_position('bottom')
+        ax.yaxis.set_ticks_position('left')
+
+        ax.set_xlabel('Time (s)', fontsize=fs)
+        ax.set_ylabel('')
+
+        ax.set_xticks([0, len(h)])
+        ax.set_xticklabels([0, len(h) * hp['dt'] / 1000])
+        ax.set_yticks(np.arange(0, 1.5, 0.5))
+        ax.set_title('')
+        # t_plot = np.arange(h[:].shape[0]) * hp['dt'] / 1000  # CHANGE LATER
+
+        if plot_type == 'plot_all':
+            for i in range(10):
+                _, plot_indexs = filter_digit(x_test, y_test, i)
+                # plot_indexs = indexes_test[str(i)][0]
+                for ii in plot_indexs:
+                    ax.plot(y_hat[:, ii, u], lw=0.5, c=colors[i])
+
+        # Plot stimulus averaged trace
+        if plot_type == 'plot_average':
+            # plot shaded area between stim on ad stim off
+            ax.axvspan(stim_on, stim_off, color='Lavender', alpha=0.5, edgecolor='None')
+
+            for i in range(10):
+                _, plot_indexs = filter_digit(x_test, y_test, i)
+                ax.plot(y_hat[:, plot_indexs, u].mean(axis=1), lw=1, c=colors[i], label=str(i))
+
+
+    plt.legend(ncol=2)
+    plt.tight_layout()
+
+    if plot_type == 'plot_average':
+        fig.savefig(save_dir + 'out_single_unit_average.pdf')
+    else:
+        fig.savefig(save_dir + 'out_single_unit_all_trials.pdf')
+
+    fig.show()
 
 
 # TODO: winnie added
 def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
     fontsize = 6
     cmap = 'Purples'
-
-
-    #rule = rule or 'dm1'
 
     model = Model(model_dir, dt=1)
     hp = model.hp
@@ -123,32 +174,30 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
 
         #n_eachring = hp['n_eachring']
-        n_hidden = hp['n_rnn']
-
-
+        #n_hidden = hp['n_rnn']
         # Plot Units
-        for i in range(hp['batch_size_test']):
-            fig = plt.figure(figsize=(1.0, 0.8))
-            ax = fig.add_axes([0.2, 0.1, 0.7, 0.75])
-            plt.xticks([])
-            # Fixed style for these plots
-            ax.tick_params(axis='both', which='major', labelsize=fontsize,
-                           width=0.5, length=2, pad=3)
-            ax.spines["left"].set_linewidth(0.5)
-            ax.spines["right"].set_visible(False)
-            ax.spines["bottom"].set_visible(False)
-            ax.spines["top"].set_visible(False)
-            ax.xaxis.set_ticks_position('bottom')
-            ax.yaxis.set_ticks_position('left')
+        #for i in range(hp['batch_size_test']):
+         #   fig = plt.figure(figsize=(1.0, 0.8))
+          #  ax = fig.add_axes([0.2, 0.1, 0.7, 0.75])
+           # plt.xticks([])
+            ## Fixed style for these plots
+            #ax.tick_params(axis='both', which='major', labelsize=fontsize,
+             #              width=0.5, length=2, pad=3)
+            #ax.spines["left"].set_linewidth(0.5)
+            #ax.spines["right"].set_visible(False)
+            #ax.spines["bottom"].set_visible(False)
+            #ax.spines["top"].set_visible(False)
+            #ax.xaxis.set_ticks_position('bottom')
+            #ax.yaxis.set_ticks_position('left')
 
-            plt.imshow(h[:, i, :].T, aspect='auto', cmap=cmap, vmin=0, vmax=1,
-                      interpolation='none', origin='lower')
-            plt.yticks([0, n_hidden-1], ['1', str(n_hidden)], rotation='horizontal')
-            plt.title('Recurrent units', fontsize=fontsize, y=0.95)
-            ax.get_yaxis().set_label_coords(-0.12, 0.5)
-            plt.savefig(save_dir + 'schematic_units_mnist' + str(i) + '_.pdf', transparent=True)
-            plt.show()
-        plt.close('all')
+            #plt.imshow(h[:, i, :].T, aspect='auto', cmap=cmap, vmin=0, vmax=1,
+            #          interpolation='none', origin='lower')
+            #plt.yticks([0, n_hidden-1], ['1', str(n_hidden)], rotation='horizontal')
+            #plt.title('Recurrent units', fontsize=fontsize, y=0.95)
+            #ax.get_yaxis().set_label_coords(-0.12, 0.5)
+            #plt.savefig(save_dir + 'schematic_units_mnist' + str(i) + '_.pdf', transparent=True)
+            #plt.show()
+        #plt.close('all')
 
         # Plot input and output
         # TODO: WIinnie added

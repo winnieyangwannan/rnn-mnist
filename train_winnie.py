@@ -402,7 +402,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
-    parser.add_argument('--modeldir', type=str, default='data/debug/mnist/20rnn_20dt_0.5times_end')
+    parser.add_argument('--modeldir', type=str, default='data/debug/mnist/20rnn_20dt_0.5stim_0.5res_end')
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -415,8 +415,9 @@ if __name__ == '__main__':
           'EPOCHS': 1,
           'n_rnn': 20,  # 20*20
           'dt': 20,
-          'times': 0.5,
-          'off': -1,   # when should output be turned off # hp['off'] = int((1000 * hp['times']) / hp['dt'] - 1)
+          'stim_times': 0.5,
+          'res_times': 0.5,
+          'off': -1,   # when should output be turned off # hp['off'] = int((400+600 * hp['stim_times']) / hp['dt'] - 1)
           }
     train(args.modeldir,
           seed=1,

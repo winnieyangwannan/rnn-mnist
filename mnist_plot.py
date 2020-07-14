@@ -18,8 +18,8 @@ from analysis import contextdm_analysis
 from analysis import posttrain_analysis
 
 root_dir = './data/mnist'
-model_dir = root_dir + '/20rnn_20dt_0.5times_end'
-save_dir = './figure/mnist/20rnn_20dt_0.5times_end/'
+model_dir = root_dir + '/20rnn_20dt_0.5times'
+save_dir = './figure/mnist/20rnn_20dt_0.5times/'
 tools.mkdir_p(save_dir)
 
 # # Performance Analysis-----------------------------------------------------

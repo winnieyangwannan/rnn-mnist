@@ -50,7 +50,8 @@ def _mnist(config, mode, **kwargs):
     dt = config['dt']
     rng = config['rng']
     step = config['current_step']
-    times = config['times']
+    stim_times = config['stim_times']
+    res_times = config['res_times']
 
     # load mnist
     x_train, x_test, y_train, y_test = load_mnist_data()
@@ -61,13 +62,13 @@ def _mnist(config, mode, **kwargs):
         y_test = tf.keras.utils.to_categorical(y_test)
 
         # Time of stimuluss on/off
-        stim_on = int(400*times/dt)
+        stim_on = int(400/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([600*times])/dt)
+        stim_dur = int(rng.choice([600*stim_times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500*times/dt)
+        tdim = stim_on+stim_dur+int(600*res_times/dt)
 
         stim_batch = x_test[step*batch_size:(step+1)*batch_size, :]
         target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
@@ -79,13 +80,13 @@ def _mnist(config, mode, **kwargs):
         y_train = tf.keras.utils.to_categorical(y_train)
 
         # Time of stimuluss on/off
-        stim_on = int(400*times/dt)
+        stim_on = int(400/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([600*times])/dt)
+        stim_dur = int(rng.choice([600*stim_times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500*times/dt)
+        tdim = stim_on+stim_dur+int(600*res_times/dt)
 
         stim_batch = x_train[step*batch_size:(step+1)*batch_size, :]
         target_batch = y_train[step*batch_size:(step+1)*batch_size, :]
@@ -98,13 +99,13 @@ def _mnist(config, mode, **kwargs):
         y_test = tf.keras.utils.to_categorical(y_test)
 
         # Time of stimuluss on/off
-        stim_on = int(400*times/dt)
+        stim_on = int(400/dt)
         stim_ons = (np.ones(batch_size)*stim_on).astype(int)
 
-        stim_dur = int(rng.choice([600*times])/dt)
+        stim_dur = int(rng.choice([600*stim_times])/dt)
         fix_offs = (stim_ons+stim_dur).astype(int)
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500*times/dt)
+        tdim = stim_on+stim_dur+int(600*res_times/dt)
 
         stim_batch = x_test[step*batch_size:(step+1)*batch_size, :]
         target_batch = y_test[step*batch_size:(step+1)*batch_size, :]
