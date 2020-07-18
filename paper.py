@@ -17,7 +17,6 @@ from analysis import data_analysis
 from analysis import contextdm_analysis
 from analysis import posttrain_analysis
 
-
 # Directories of the models and the sample model
 # Change these to your directories
 # root_dir = './data/tanhgru'
@@ -88,11 +87,11 @@ tsa.compute_and_plot_taskspace(epochs=['stim1'], dim_reduction_type='PCA')
 setups = [1, 2, 3]
 for setup in setups:
     taskset.plot_taskspace_group(root_dir, setup=setup,
-                                  restore=True, representation='rate')
+                                 restore=True, representation='rate')
     taskset.plot_taskspace_group(root_dir, setup=setup,
-                                  restore=True, representation='weight')
+                                 restore=True, representation='weight')
     taskset.plot_replacerule_performance_group(
-             root_dir, setup=setup, restore=True)
+        root_dir, setup=setup, restore=True)
 
 name = 'tanhgru'
 name = 'mixrule'
@@ -101,20 +100,19 @@ setups = [1, 2]
 d = './data/' + name
 for setup in setups:
     taskset.plot_taskspace_group(d, setup=setup,
-                                  restore=False, representation='rate',
-                                  fig_name_addon=name)
+                                 restore=False, representation='rate',
+                                 fig_name_addon=name)
     taskset.plot_taskspace_group(d, setup=setup,
-                                  restore=True, representation='weight',
-                                  fig_name_addon=name)
+                                 restore=True, representation='weight',
+                                 fig_name_addon=name)
     taskset.plot_replacerule_performance_group(
-         d, setup=setup, restore=False, fig_name_addon=name)
-
+        d, setup=setup, restore=False, fig_name_addon=name)
 
 ## Continual Learning Analysis----------------------------------------------
 hp_target0 = {'c_intsyn': 0, 'ksi_intsyn': 0.01,
-               'activation': 'relu', 'max_steps': 4e5}
+              'activation': 'relu', 'max_steps': 4e5}
 hp_target1 = {'c_intsyn': 1, 'ksi_intsyn': 0.01,
-               'activation': 'relu', 'max_steps': 4e5}
+              'activation': 'relu', 'max_steps': 4e5}
 model_dirs0 = tools.find_all_models('data/seq/', hp_target0)
 model_dirs1 = tools.find_all_models('data/seq/', hp_target1)
 model_dirs0 = tools.select_by_perf(model_dirs0, perf_min=0.8)
@@ -123,7 +121,6 @@ performance.plot_performanceprogress_cont((model_dirs0[0], model_dirs1[2]))
 performance.plot_finalperformance_cont(model_dirs0, model_dirs1)
 data_analysis.plot_fracvar_hist_byhp(hp_vary='c_intsyn', mode='all_var', legend=False)
 data_analysis.plot_fracvar_hist_byhp(hp_vary='p_weight_train', mode='all_var')
-
 
 ## Data analysis------------------------------------------------------------
 # Note that these wouldn't work without the data file

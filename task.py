@@ -7,18 +7,16 @@ from mnist_task import *
 from mnist_task import _mnist
 from tensorflow import keras
 
-
-
 rules_dict = \
-    {'all' : ['fdgo', 'reactgo', 'delaygo', 'fdanti', 'reactanti', 'delayanti',
-              'dm1', 'dm2', 'contextdm1', 'contextdm2', 'multidm',
-              'delaydm1', 'delaydm2', 'contextdelaydm1', 'contextdelaydm2', 'multidelaydm',
-              'dmsgo', 'dmsnogo', 'dmcgo', 'dmcnogo'],
+    {'all': ['fdgo', 'reactgo', 'delaygo', 'fdanti', 'reactanti', 'delayanti',
+             'dm1', 'dm2', 'contextdm1', 'contextdm2', 'multidm',
+             'delaydm1', 'delaydm2', 'contextdelaydm1', 'contextdelaydm2', 'multidelaydm',
+             'dmsgo', 'dmsnogo', 'dmcgo', 'dmcnogo'],
 
-    'mante' : ['contextdm1', 'contextdm1'],
+     'mante': ['contextdm1', 'contextdm1'],
 
-    'oicdmc' : ['oic', 'dmc'],
-    'mnist': ['mnist']}
+     'oicdmc': ['oic', 'dmc'],
+     'mnist': ['mnist']}
 
 # Store indices of rules
 rule_index_map = dict()
@@ -30,11 +28,11 @@ for ruleset, rules in rules_dict.items():
 
 def get_num_ring(ruleset):
     '''get number of stimulus rings'''
-    #TODO: winnie add
+    # TODO: winnie add
     if ruleset == 'mnist':
         return 1
     else:
-         return 3 if ruleset=='oicdmc' else 2
+        return 3 if ruleset == 'oicdmc' else 2
 
 
 def get_num_rule(ruleset):
@@ -44,12 +42,12 @@ def get_num_rule(ruleset):
 
 def get_rule_index(rule, config):
     '''get the input index for the given rule'''
-    return rule_index_map[config['ruleset']][rule]+config['rule_start']
+    return rule_index_map[config['ruleset']][rule] + config['rule_start']
 
 
 def get_dist(original_dist):
     '''Get the distance in periodic boundary conditions'''
-    return np.minimum(abs(original_dist),2*np.pi-abs(original_dist))
+    return np.minimum(abs(original_dist), 2 * np.pi - abs(original_dist))
 
 
 class Trial(object):
@@ -63,25 +61,25 @@ class Trial(object):
             tdim: int, number of time steps
             batch_size: int, batch size
         """
-        self.float_type = 'float32' # This should be the default
+        self.float_type = 'float32'  # This should be the default
         self.config = config
         self.dt = self.config['dt']
 
         self.n_eachring = self.config['n_eachring']
         self.n_input = self.config['n_input']
         self.n_output = self.config['n_output']
-        self.pref  = np.arange(0,2*np.pi,2*np.pi/self.n_eachring) # preferences
+        self.pref = np.arange(0, 2 * np.pi, 2 * np.pi / self.n_eachring)  # preferences
 
         self.batch_size = batch_size
         self.tdim = tdim
         self.x = np.zeros((tdim, batch_size, self.n_input), dtype=self.float_type)
         self.y = np.zeros((tdim, batch_size, self.n_output), dtype=self.float_type)
         if self.config['loss_type'] == 'lsq':
-            self.y[:,:,:] = 0.05
+            self.y[:, :, :] = 0.05
         # y_loc is the stimulus location of the output, -1 for fixation, (0,2 pi) for response
-        self.y_loc = -np.ones((tdim, batch_size)      , dtype=self.float_type)
+        self.y_loc = -np.ones((tdim, batch_size), dtype=self.float_type)
 
-        self._sigma_x = config['sigma_x']*np.sqrt(2/config['alpha'])
+        self._sigma_x = config['sigma_x'] * np.sqrt(2 / config['alpha'])
 
     def expand(self, var):
         """Expand an int/float to list."""
@@ -111,8 +109,8 @@ class Trial(object):
                 self.x[ons[i]: offs[i], i, 0] = 1
             elif loc_type == 'stim':
                 # Assuming that mods[i] starts from 1
-                self.x[ons[i]: offs[i], i, 1+(mods[i]-1)*self.n_eachring:1+mods[i]*self.n_eachring] \
-                    += self.add_x_loc(locs[i])*strengths[i]
+                self.x[ons[i]: offs[i], i, 1 + (mods[i] - 1) * self.n_eachring:1 + mods[i] * self.n_eachring] \
+                    += self.add_x_loc(locs[i]) * strengths[i]
             elif loc_type == 'fix_out':
                 # Notice this shouldn't be set at 1, because the output is logistic and saturates at 1
                 if self.config['loss_type'] == 'lsq':
@@ -121,7 +119,7 @@ class Trial(object):
                     self.y[ons[i]: offs[i], i, 0] = 1.0
             elif loc_type == 'out':
                 if self.config['loss_type'] == 'lsq':
-                    self.y[ons[i]: offs[i], i, 1:] += self.add_y_loc(locs[i])*strengths[i]
+                    self.y[ons[i]: offs[i], i, 1:] += self.add_y_loc(locs[i]) * strengths[i]
                 else:
                     y_tmp = self.add_y_loc(locs[i])
                     y_tmp /= np.sum(y_tmp)
@@ -132,7 +130,7 @@ class Trial(object):
 
     def add_x_noise(self):
         """Add input noise."""
-        self.x += self.config['rng'].randn(*self.x.shape)*self._sigma_x
+        self.x += self.config['rng'].randn(*self.x.shape) * self._sigma_x
 
     def add_c_mask(self, pre_offs, post_ons):
         """Add a cost mask.
@@ -142,7 +140,7 @@ class Trial(object):
         as the pre period
         """
 
-        pre_on   = int(100/self.dt) # never check the first 100ms
+        pre_on = int(100 / self.dt)  # never check the first 100ms
         pre_offs = self.expand(pre_offs)
         post_ons = self.expand(post_ons)
 
@@ -157,9 +155,9 @@ class Trial(object):
                 c_mask[pre_on:pre_offs[i], i, :] = 1.
 
             # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-            c_mask[:, :, 0] *= 2. # Fixation is important
+            c_mask[:, :, 0] *= 2.  # Fixation is important
 
-            self.c_mask = c_mask.reshape((self.tdim*self.batch_size, self.n_output))
+            self.c_mask = c_mask.reshape((self.tdim * self.batch_size, self.n_output))
         else:
             c_mask = np.zeros((self.tdim, self.batch_size), dtype=self.float_type)
             for i in range(self.batch_size):
@@ -171,29 +169,29 @@ class Trial(object):
                 # Scale the cost mask of the pre-response period by a factor
                 c_mask[pre_on:pre_offs[i], i] = 1.
 
-            self.c_mask = c_mask.reshape((self.tdim*self.batch_size,))
+            self.c_mask = c_mask.reshape((self.tdim * self.batch_size,))
             self.c_mask /= self.c_mask.mean()
 
     def add_rule(self, rule, on=None, off=None, strength=1.):
         """Add rule input."""
         if isinstance(rule, int):
-            self.x[on:off, :, self.config['rule_start']+rule] = strength
+            self.x[on:off, :, self.config['rule_start'] + rule] = strength
         else:
             ind_rule = get_rule_index(rule, self.config)
             self.x[on:off, :, ind_rule] = strength
 
     def add_x_loc(self, x_loc):
         """Input activity given location."""
-        dist = get_dist(x_loc-self.pref)  # periodic boundary
-        dist /= np.pi/8
-        return 0.8*np.exp(-dist**2/2)
+        dist = get_dist(x_loc - self.pref)  # periodic boundary
+        dist /= np.pi / 8
+        return 0.8 * np.exp(-dist ** 2 / 2)
 
     def add_y_loc(self, y_loc):
         """Target response given location."""
-        dist = get_dist(y_loc-self.pref)  # periodic boundary
+        dist = get_dist(y_loc - self.pref)  # periodic boundary
         if self.config['loss_type'] == 'lsq':
-            dist /= np.pi/8
-            y = 0.8*np.exp(-dist**2/2)
+            dist /= np.pi / 8
+            y = 0.8 * np.exp(-dist ** 2 / 2)
         else:
             # One-hot output
             y = np.zeros_like(dist)
@@ -208,8 +206,8 @@ def test_init(config, mode, **kwargs):
     Fixation is on then off.
     '''
     dt = config['dt']
-    tdim = int(10000/dt)
-    fix_offs  = [int(800/dt)]
+    tdim = int(10000 / dt)
+    fix_offs = [int(800 / dt)]
     batch_size = 1
 
     trial = Trial(config, tdim, batch_size)
@@ -240,56 +238,56 @@ def delaygo_(config, mode, anti_response, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
 
         # A list of locations of stimuluss and on/off time
-        stim_locs = rng.rand(batch_size)*2*np.pi
+        stim_locs = rng.rand(batch_size) * 2 * np.pi
         # stim_ons  = int(500/dt)
-        stim_ons  = int(rng.choice([300, 500, 700])/dt)
+        stim_ons = int(rng.choice([300, 500, 700]) / dt)
         # stim_offs = stim_ons + int(200/dt)
-        stim_offs = stim_ons + int(rng.choice([200, 400, 600])/dt)
-        fix_offs = stim_offs + int(rng.choice([200, 400, 800, 1600])/dt)
+        stim_offs = stim_ons + int(rng.choice([200, 400, 600]) / dt)
+        fix_offs = stim_offs + int(rng.choice([200, 400, 800, 1600]) / dt)
         # fix_offs = stim_offs + int(rng.choice([1600])/dt)
-        tdim     = fix_offs + int(500/dt)
-        stim_mod  = rng.choice([1,2])
+        tdim = fix_offs + int(500 / dt)
+        stim_mod = rng.choice([1, 2])
 
     elif mode == 'test':
-        tdim = int(2500/dt)
+        tdim = int(2500 / dt)
         n_stim_loc, n_stim_mod = batch_shape = 20, 2
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim_mod = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_stim_mod = np.unravel_index(range(batch_size), batch_shape)
 
-        fix_offs  = int(2000/dt)
-        stim_locs  = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim_ons   = int(500/dt)
-        stim_mod   = ind_stim_mod + 1
-        stim_offs  = int(1000/dt)
+        fix_offs = int(2000 / dt)
+        stim_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim_ons = int(500 / dt)
+        stim_mod = ind_stim_mod + 1
+        stim_offs = int(1000 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
         stim_locs = p['stim_locs']
         # Time of stimuluss on/off
-        stim_ons    = int(p['stim_ons']/dt)
-        stim_offs   = int(p['stim_offs']/dt)
-        delay_time = int(p['delay_time']/dt)
-        fix_offs   = stim_offs + delay_time
-        tdim       = int(400/dt) + fix_offs
-        stim_mod    = 1
+        stim_ons = int(p['stim_ons'] / dt)
+        stim_offs = int(p['stim_offs'] / dt)
+        delay_time = int(p['delay_time'] / dt)
+        fix_offs = stim_offs + delay_time
+        tdim = int(400 / dt) + fix_offs
+        stim_mod = 1
 
         batch_size = len(stim_locs)
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
-    check_ons= fix_offs + int(100/dt)
+    check_ons = fix_offs + int(100 / dt)
 
     # Response locations
     stim_locs = np.array(stim_locs)
     if not anti_response:
         response_locs = stim_locs
     else:
-        response_locs = (stim_locs+np.pi)%(2*np.pi)
+        response_locs = (stim_locs + np.pi) % (2 * np.pi)
 
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in', offs=fix_offs)
@@ -298,10 +296,10 @@ def delaygo_(config, mode, anti_response, **kwargs):
     trial.add('out', response_locs, ons=fix_offs)
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim_ons),
-                   'stim1'     : (stim_ons, stim_offs),
-                   'delay1'   : (stim_offs, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim_ons),
+                    'stim1': (stim_ons, stim_offs),
+                    'delay1': (stim_offs, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -313,11 +311,11 @@ def delaygo(config, mode, **kwargs):
 def contextdm_genstim(batch_size, rng, stim_coh_range=None):
     stim_mean = rng.uniform(0.8, 1.2, (batch_size,))
     if stim_coh_range is None:
-        stim_coh_range = np.array([0.16, 0.32, 0.64])*1.0
-    stim_coh  = rng.choice(stim_coh_range, (batch_size,))
+        stim_coh_range = np.array([0.16, 0.32, 0.64]) * 1.0
+    stim_coh = rng.choice(stim_coh_range, (batch_size,))
     stim_sign = rng.choice([+1, -1], (batch_size,))
-    stim1_strengths = stim_mean + stim_coh*stim_sign
-    stim2_strengths = stim_mean - stim_coh*stim_sign
+    stim1_strengths = stim_mean + stim_coh * stim_sign
+    stim2_strengths = stim_mean - stim_coh * stim_sign
     return stim1_strengths, stim2_strengths
 
 
@@ -347,13 +345,13 @@ def _contextdm(config, mode, attend_mod, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
 
         # A list of locations of stimuluss, same locations for both modalities
-        stim_dist = rng.uniform(0.5*np.pi, 1.5*np.pi,(batch_size,))*rng.choice([-1,1],(batch_size,))
-        stim1_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim2_locs = (stim1_locs+stim_dist)%(2*np.pi)
+        stim_dist = rng.uniform(0.5 * np.pi, 1.5 * np.pi, (batch_size,)) * rng.choice([-1, 1], (batch_size,))
+        stim1_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
+        stim2_locs = (stim1_locs + stim_dist) % (2 * np.pi)
 
         stim_coh_range = np.array([0.01, 0.02, 0.04, 0.08])
         if ('easy_task' in config) and config['easy_task']:
@@ -373,46 +371,46 @@ def _contextdm(config, mode, attend_mod, **kwargs):
             stim1_mod12_diff = stim1_strengths * \
                                np.random.uniform(0.2, 0.8, (batch_size,)) * \
                                np.random.choice([+1, -1], (batch_size,))
-            stim1_mod1_strengths = stim1_strengths + stim1_mod12_diff/2
-            stim1_mod2_strengths = stim1_strengths - stim1_mod12_diff/2
+            stim1_mod1_strengths = stim1_strengths + stim1_mod12_diff / 2
+            stim1_mod2_strengths = stim1_strengths - stim1_mod12_diff / 2
 
             stim2_mod12_diff = stim2_strengths * \
                                np.random.uniform(0.2, 0.8, (batch_size,)) * \
                                np.random.choice([+1, -1], (batch_size,))
-            stim2_mod1_strengths = stim2_strengths + stim2_mod12_diff/2
-            stim2_mod2_strengths = stim2_strengths - stim2_mod12_diff/2
+            stim2_mod1_strengths = stim2_strengths + stim2_mod12_diff / 2
+            stim2_mod2_strengths = stim2_strengths - stim2_mod12_diff / 2
 
         # Time of stimuluss on/off
-        stim_on = int(rng.uniform(100,400)/dt)
-        stim_ons = (np.ones(batch_size)*stim_on).astype(int)
-        stim_dur = int(rng.choice([400, 800, 1600])/dt)
+        stim_on = int(rng.uniform(100, 400) / dt)
+        stim_ons = (np.ones(batch_size) * stim_on).astype(int)
+        stim_dur = int(rng.choice([400, 800, 1600]) / dt)
         # stim_dur = rng.choice((np.array([200, 400, 800, 1600])/dt).astype(int)) # Current setting
         # stim_dur = int(rng.uniform(500, 1000)/dt) # Current setting
         # stim_dur = int(800/dt)
-        stim_offs = stim_ons+stim_dur
+        stim_offs = stim_ons + stim_dur
 
         # delay_dur = rng.choice((np.array([200, 400, 800])/dt).astype(int)) # Current setting
         delay_dur = 0
-        fix_offs  = stim_offs + delay_dur
+        fix_offs = stim_offs + delay_dur
 
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+delay_dur+int(500/dt)
+        tdim = stim_on + stim_dur + delay_dur + int(500 / dt)
 
     elif mode == 'test':
-        tdim = int(2000/dt)
+        tdim = int(2000 / dt)
         n_stim_loc, n_stim_mod1_strength, n_stim_mod2_strength = batch_shape = 20, 5, 5
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim_mod1_strength, ind_stim_mod2_strength = np.unravel_index(range(batch_size),batch_shape)
-        fix_offs  = int(1500/dt)
+        ind_stim_loc, ind_stim_mod1_strength, ind_stim_mod2_strength = np.unravel_index(range(batch_size), batch_shape)
+        fix_offs = int(1500 / dt)
 
-        stim1_locs = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim2_locs = (stim1_locs+np.pi)%(2*np.pi)
-        stim1_mod1_strengths = 0.4*ind_stim_mod1_strength/n_stim_mod1_strength+0.8
+        stim1_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim2_locs = (stim1_locs + np.pi) % (2 * np.pi)
+        stim1_mod1_strengths = 0.4 * ind_stim_mod1_strength / n_stim_mod1_strength + 0.8
         stim2_mod1_strengths = 2 - stim1_mod1_strengths
-        stim1_mod2_strengths = 0.4*ind_stim_mod2_strength/n_stim_mod2_strength+0.8
+        stim1_mod2_strengths = 0.4 * ind_stim_mod2_strength / n_stim_mod2_strength + 0.8
         stim2_mod2_strengths = 2 - stim1_mod2_strengths
-        stim_ons  = int(500/dt)
-        stim_offs = int(1500/dt)
+        stim_ons = int(500 / dt)
+        stim_offs = int(1500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -422,20 +420,20 @@ def _contextdm(config, mode, attend_mod, **kwargs):
         stim2_mod1_strengths = p['stim2_mod1_strengths']
         stim1_mod2_strengths = p['stim1_mod2_strengths']
         stim2_mod2_strengths = p['stim2_mod2_strengths']
-        stim_time = int(p['stim_time']/dt)
+        stim_time = int(p['stim_time'] / dt)
         batch_size = len(stim1_locs)
 
         # Time of stimuluss on/off
-        stim_ons = int(500/dt)
+        stim_ons = int(500 / dt)
         stim_offs = stim_ons + stim_time
         fix_offs = stim_offs
-        tdim = int(500/dt) + fix_offs
+        tdim = int(500 / dt) + fix_offs
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons  = fix_offs + int(100/dt)
+    check_ons = fix_offs + int(100 / dt)
 
     if attend_mod == 1:
         stim1_strengths, stim2_strengths = stim1_mod1_strengths, stim2_mod1_strengths
@@ -452,16 +450,16 @@ def _contextdm(config, mode, attend_mod, **kwargs):
     trial.add('stim', stim1_locs, ons=stim_ons, offs=stim_offs, strengths=stim1_mod2_strengths, mods=2)
     trial.add('stim', stim2_locs, ons=stim_ons, offs=stim_offs, strengths=stim2_mod2_strengths, mods=2)
     trial.add('fix_out', offs=fix_offs)
-    stim_locs = [stim1_locs[i] if (stim1_strengths[i]>stim2_strengths[i])
-                else stim2_locs[i] for i in range(batch_size)]
+    stim_locs = [stim1_locs[i] if (stim1_strengths[i] > stim2_strengths[i])
+                 else stim2_locs[i] for i in range(batch_size)]
     trial.add('out', stim_locs, ons=fix_offs)
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim_ons),
-                   'stim1'    : (stim_ons, stim_offs),
-                   # 'delay1'   : (stim_offs, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim_ons),
+                    'stim1': (stim_ons, stim_offs),
+                    # 'delay1'   : (stim_offs, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -499,27 +497,27 @@ def reactgo_(config, mode, anti_response, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
         # each batch consists of sequences of equal length
         # A list of locations of fixation points and fixation off time
-        stim_ons = int(rng.uniform(500,2500)/dt)
-        tdim = int(500/dt) + stim_ons
+        stim_ons = int(rng.uniform(500, 2500) / dt)
+        tdim = int(500 / dt) + stim_ons
 
         # A list of locations of stimuluss (they are always on)
-        stim_locs = rng.uniform(0, 2*np.pi, (batch_size,))
+        stim_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
 
-        stim_mod  = rng.choice([1,2])
+        stim_mod = rng.choice([1, 2])
 
     elif mode == 'test':
-        tdim = int(2500/dt)
+        tdim = int(2500 / dt)
         n_stim_loc, n_stim_mod = batch_shape = 20, 2
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim_mod = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_stim_mod = np.unravel_index(range(batch_size), batch_shape)
 
-        stim_ons  = int(2000/dt)
-        stim_locs  = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim_mod   = ind_stim_mod + 1
+        stim_ons = int(2000 / dt)
+        stim_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim_mod = ind_stim_mod + 1
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -527,22 +525,22 @@ def reactgo_(config, mode, anti_response, **kwargs):
         batch_size = len(stim_locs)
 
         # Time of stimuluss on/off
-        stim_ons = int(1000/dt)
-        tdim = int(400/dt) + stim_ons
-        stim_mod   = 1
+        stim_ons = int(1000 / dt)
+        tdim = int(400 / dt) + stim_ons
+        stim_mod = 1
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons  = stim_ons + int(100/dt)
+    check_ons = stim_ons + int(100 / dt)
 
     # Response locations
     stim_locs = np.array(stim_locs)
     if not anti_response:
         response_locs = stim_locs
     else:
-        response_locs = (stim_locs+np.pi)%(2*np.pi)
+        response_locs = (stim_locs + np.pi) % (2 * np.pi)
 
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in')
@@ -551,8 +549,8 @@ def reactgo_(config, mode, anti_response, **kwargs):
     trial.add('out', response_locs, ons=stim_ons)
     trial.add_c_mask(pre_offs=stim_ons, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim_ons),
-                   'go1'      : (stim_ons, None)}
+    trial.epochs = {'fix1': (None, stim_ons),
+                    'go1': (stim_ons, None)}
 
     return trial
 
@@ -590,54 +588,54 @@ def fdgo_(config, mode, anti_response, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
         # each batch consists of sequences of equal length
         # A list of locations of fixation points and fixation off time
 
         # A list of locations of stimulus (they are always on)
-        stim_locs = rng.rand(batch_size)*2*np.pi
-        stim_mod  = rng.choice([1,2])
-        stim_ons  = int(rng.uniform(300,700)/dt)
+        stim_locs = rng.rand(batch_size) * 2 * np.pi
+        stim_mod = rng.choice([1, 2])
+        stim_ons = int(rng.uniform(300, 700) / dt)
 
-        fix_offs  = stim_ons + int(rng.uniform(500,1500)/dt)
-        tdim      = int(500/dt) + fix_offs
+        fix_offs = stim_ons + int(rng.uniform(500, 1500) / dt)
+        tdim = int(500 / dt) + fix_offs
 
     elif mode == 'test':
-        tdim = int(2000/dt)
+        tdim = int(2000 / dt)
         n_stim_loc, n_stim_mod = batch_shape = 20, 2
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim_mod = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_stim_mod = np.unravel_index(range(batch_size), batch_shape)
 
-        stim_ons   = int(500/dt)
-        fix_offs   = int(1500/dt)
-        stim_locs  = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim_mod   = ind_stim_mod + 1
+        stim_ons = int(500 / dt)
+        fix_offs = int(1500 / dt)
+        stim_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim_mod = ind_stim_mod + 1
 
     elif mode == 'psychometric':
         p = kwargs['params']
         stim_locs = p['stim_locs']
-        stim_time = int(p['stim_time']/dt)
+        stim_time = int(p['stim_time'] / dt)
         batch_size = len(stim_locs)
 
         # Time of stimuluss on/off
-        stim_ons   = int(300/dt)
-        fix_offs  = stim_ons + stim_time
-        tdim      = int(400/dt) + fix_offs
-        stim_mod   = 1
+        stim_ons = int(300 / dt)
+        fix_offs = stim_ons + stim_time
+        tdim = int(400 / dt) + fix_offs
+        stim_mod = 1
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons  = fix_offs + int(100/dt)
+    check_ons = fix_offs + int(100 / dt)
 
     # Response locations
     stim_locs = np.array(stim_locs)
     if not anti_response:
         response_locs = stim_locs
     else:
-        response_locs = (stim_locs+np.pi)%(2*np.pi)
+        response_locs = (stim_locs + np.pi) % (2 * np.pi)
 
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in', offs=fix_offs)
@@ -646,9 +644,9 @@ def fdgo_(config, mode, anti_response, **kwargs):
     trial.add('out', response_locs, ons=fix_offs)
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim_ons),
-                   'stim1'     : (stim_ons, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim_ons),
+                    'stim1': (stim_ons, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -663,7 +661,6 @@ def fdanti(config, mode, **kwargs):
 
 def delayanti(config, mode, **kwargs):
     return delaygo_(config, mode, True, **kwargs)
-
 
 
 def _dm(config, mode, stim_mod, **kwargs):
@@ -687,16 +684,16 @@ def _dm(config, mode, stim_mod, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
 
         # A list of locations of stimuluss (they are always on)
-        stim_dist = rng.uniform(0.5*np.pi,1.5*np.pi,(batch_size,))*rng.choice([-1,1],(batch_size,))
-        stim1_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim2_locs = (stim1_locs+stim_dist)%(2*np.pi)
+        stim_dist = rng.uniform(0.5 * np.pi, 1.5 * np.pi, (batch_size,)) * rng.choice([-1, 1], (batch_size,))
+        stim1_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
+        stim2_locs = (stim1_locs + stim_dist) % (2 * np.pi)
 
         # Target strengths
-        stims_mean = rng.uniform(0.8,1.2,(batch_size,))
+        stims_mean = rng.uniform(0.8, 1.2, (batch_size,))
         # stims_diff = rng.uniform(0.01,0.2,(batch_size,))
         # stims_diff = rng.choice([0.02, 0.04, 0.08], (batch_size,)) # Encourage integration
         # stims_coh  = rng.choice([0.16, 0.32, 0.64], (batch_size,))
@@ -706,34 +703,34 @@ def _dm(config, mode, stim_mod, **kwargs):
             # stim_coh_range = np.array([0.1, 0.2, 0.4, 0.8])
             stim_coh_range *= 10
 
-        stims_coh  = rng.choice(stim_coh_range, (batch_size,))
-        stims_sign = rng.choice([1,-1], (batch_size,))
+        stims_coh = rng.choice(stim_coh_range, (batch_size,))
+        stims_sign = rng.choice([1, -1], (batch_size,))
 
-        stim1_strengths = stims_mean + stims_coh*stims_sign
-        stim2_strengths = stims_mean - stims_coh*stims_sign
+        stim1_strengths = stims_mean + stims_coh * stims_sign
+        stim2_strengths = stims_mean - stims_coh * stims_sign
 
         # Time of stimuluss on/off
-        stim_on = int(rng.uniform(100,400)/dt)
-        stim_ons = (np.ones(batch_size)*stim_on).astype(int)
+        stim_on = int(rng.uniform(100, 400) / dt)
+        stim_ons = (np.ones(batch_size) * stim_on).astype(int)
         # stim_dur = int(rng.uniform(300,1500)/dt)
-        stim_dur = int(rng.choice([400, 800, 1600])/dt)
-        fix_offs = (stim_ons+stim_dur).astype(int)
+        stim_dur = int(rng.choice([400, 800, 1600]) / dt)
+        fix_offs = (stim_ons + stim_dur).astype(int)
         # each batch consists of sequences of equal length
-        tdim = stim_on+stim_dur+int(500/dt)
+        tdim = stim_on + stim_dur + int(500 / dt)
 
     elif mode == 'test':
         # Dense coverage of the stimulus space
-        tdim = int(2500/dt)
+        tdim = int(2500 / dt)
         n_stim_loc, n_stim1_strength = batch_shape = 20, 5
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim1_strength = np.unravel_index(range(batch_size),batch_shape)
-        fix_offs  = int(2000/dt)
+        ind_stim_loc, ind_stim1_strength = np.unravel_index(range(batch_size), batch_shape)
+        fix_offs = int(2000 / dt)
 
-        stim1_locs = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim2_locs = (stim1_locs+np.pi)%(2*np.pi)
-        stim1_strengths = 0.4*ind_stim1_strength/n_stim1_strength+0.8
+        stim1_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim2_locs = (stim1_locs + np.pi) % (2 * np.pi)
+        stim1_strengths = 0.4 * ind_stim1_strength / n_stim1_strength + 0.8
         stim2_strengths = 2 - stim1_strengths
-        stim_ons  = int(500/dt)
+        stim_ons = int(500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -741,35 +738,34 @@ def _dm(config, mode, stim_mod, **kwargs):
         stim2_locs = p['stim2_locs']
         stim1_strengths = p['stim1_strengths']
         stim2_strengths = p['stim2_strengths']
-        stim_time = int(p['stim_time']/dt)
+        stim_time = int(p['stim_time'] / dt)
         batch_size = len(stim1_locs)
 
         # Time of stimuluss on/off
-        stim_ons = int(300/dt)
-        fix_offs = int(300/dt) + stim_time
-        tdim = int(400/dt) + fix_offs
+        stim_ons = int(300 / dt)
+        fix_offs = int(300 / dt) + stim_time
+        tdim = int(400 / dt) + fix_offs
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons  = fix_offs + int(100/dt)
-
+    check_ons = fix_offs + int(100 / dt)
 
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in', offs=fix_offs)
     trial.add('stim', stim1_locs, ons=stim_ons, offs=fix_offs, strengths=stim1_strengths, mods=stim_mod)
     trial.add('stim', stim2_locs, ons=stim_ons, offs=fix_offs, strengths=stim2_strengths, mods=stim_mod)
     trial.add('fix_out', offs=fix_offs)
-    stim_locs = [stim1_locs[i] if (stim1_strengths[i]>stim2_strengths[i])
-                else stim2_locs[i] for i in range(batch_size)]
+    stim_locs = [stim1_locs[i] if (stim1_strengths[i] > stim2_strengths[i])
+                 else stim2_locs[i] for i in range(batch_size)]
     trial.add('out', stim_locs, ons=fix_offs)
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim_ons),
-                   'stim1'     : (stim_ons, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim_ons),
+                    'stim1': (stim_ons, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -802,100 +798,99 @@ def _delaydm(config, mode, stim_mod, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
 
         # A list of locations of stimuluss (they are always on)
-        stim_dist = rng.uniform(0.5*np.pi, 1.5*np.pi,(batch_size,))*rng.choice([-1,1],(batch_size,))
-        stim1_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim2_locs = (stim1_locs+stim_dist)%(2*np.pi)
+        stim_dist = rng.uniform(0.5 * np.pi, 1.5 * np.pi, (batch_size,)) * rng.choice([-1, 1], (batch_size,))
+        stim1_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
+        stim2_locs = (stim1_locs + stim_dist) % (2 * np.pi)
 
-        stims_mean = rng.uniform(0.8,1.2,(batch_size,))
+        stims_mean = rng.uniform(0.8, 1.2, (batch_size,))
         # stims_diff = rng.choice([0.32,0.64,1.28],(batch_size,))
 
-        stim_coh_range = np.array([0.08,0.16,0.32])
+        stim_coh_range = np.array([0.08, 0.16, 0.32])
         if ('easy_task' in config) and config['easy_task']:
             # stim_coh_range = np.array([0.16,0.32,0.64])
             stim_coh_range *= 2
 
-        stims_coh  = rng.choice(stim_coh_range,(batch_size,))
-        stims_sign = rng.choice([1,-1], (batch_size,))
+        stims_coh = rng.choice(stim_coh_range, (batch_size,))
+        stims_sign = rng.choice([1, -1], (batch_size,))
 
-        stim1_strengths = stims_mean + stims_coh*stims_sign
-        stim2_strengths = stims_mean - stims_coh*stims_sign
+        stim1_strengths = stims_mean + stims_coh * stims_sign
+        stim2_strengths = stims_mean - stims_coh * stims_sign
 
         # stim1_strengths = rng.uniform(0.25,1.75,(batch_size,))
         # stim2_strengths = rng.uniform(0.25,1.75,(batch_size,))
 
         # Time of stimuluss on/off
-        stim1_ons  = int(rng.choice([200, 400, 600])/dt)
-        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600])/dt)
-        stim2_ons  = stim1_offs + int(rng.choice([200, 400, 800, 1600])/dt)
-        stim2_offs = stim2_ons + int(rng.choice([200, 400, 600])/dt)
-        fix_offs  = stim2_offs + int(rng.uniform(100,300)/dt)
+        stim1_ons = int(rng.choice([200, 400, 600]) / dt)
+        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600]) / dt)
+        stim2_ons = stim1_offs + int(rng.choice([200, 400, 800, 1600]) / dt)
+        stim2_offs = stim2_ons + int(rng.choice([200, 400, 600]) / dt)
+        fix_offs = stim2_offs + int(rng.uniform(100, 300) / dt)
 
         # stim2_ons  = (np.ones(batch_size)*rng.choice([400,500,600,700,1400])/dt).astype(int)
         # stim2_ons  = (np.ones(batch_size)*rng.choice([400,600,1000,1400,2000])/dt).astype(int)
         # stim2_ons  = (np.ones(batch_size)*rng.uniform(2800,3200)/dt).astype(int)
 
         # each batch consists of sequences of equal length
-        tdim = fix_offs + int(500/dt) # longest trial
+        tdim = fix_offs + int(500 / dt)  # longest trial
 
     elif mode == 'test':
-        tdim = int(3000/dt)
+        tdim = int(3000 / dt)
         n_stim_loc, n_stim1_strength = batch_shape = 20, 5
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim1_strength = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_stim1_strength = np.unravel_index(range(batch_size), batch_shape)
 
-        fix_offs  = int(2700/dt)
-        stim1_locs = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim2_locs = (stim1_locs+np.pi)%(2*np.pi)
-        stim1_strengths = 1.0*ind_stim1_strength/n_stim1_strength+0.5
+        fix_offs = int(2700 / dt)
+        stim1_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim2_locs = (stim1_locs + np.pi) % (2 * np.pi)
+        stim1_strengths = 1.0 * ind_stim1_strength / n_stim1_strength + 0.5
         stim2_strengths = 2 - stim1_strengths
-        stim1_ons = int(500/dt)
-        stim1_offs = int(1000/dt)
-        stim2_ons = int(2000/dt)
-        stim2_offs = int(2500/dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = int(1000 / dt)
+        stim2_ons = int(2000 / dt)
+        stim2_offs = int(2500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
-        stim1_locs       = p['stim1_locs']
-        stim2_locs       = p['stim2_locs']
-        stim1_strengths  = p['stim1_strengths']
-        stim2_strengths  = p['stim2_strengths']
-        stim1_ons        = int(p['stim1_ons']/dt)
-        stim1_offs       = int(p['stim1_offs']/dt)
-        stim2_ons        = int(p['stim2_ons']/dt)
-        stim2_offs       = int(p['stim2_offs']/dt)
+        stim1_locs = p['stim1_locs']
+        stim2_locs = p['stim2_locs']
+        stim1_strengths = p['stim1_strengths']
+        stim2_strengths = p['stim2_strengths']
+        stim1_ons = int(p['stim1_ons'] / dt)
+        stim1_offs = int(p['stim1_offs'] / dt)
+        stim2_ons = int(p['stim2_ons'] / dt)
+        stim2_offs = int(p['stim2_offs'] / dt)
         batch_size = len(stim1_locs)
 
-        fix_offs = int(200/dt) + stim2_offs
-        tdim = int(300/dt) + fix_offs
+        fix_offs = int(200 / dt) + stim2_offs
+        tdim = int(300 / dt) + fix_offs
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons  = fix_offs + int(100/dt)
+    check_ons = fix_offs + int(100 / dt)
 
     trial = Trial(config, tdim, batch_size)
     trial.add('fix_in', offs=fix_offs)
     trial.add('stim', stim1_locs, ons=stim1_ons, offs=stim1_offs, strengths=stim1_strengths, mods=stim_mod)
     trial.add('stim', stim2_locs, ons=stim2_ons, offs=stim2_offs, strengths=stim2_strengths, mods=stim_mod)
     trial.add('fix_out', offs=fix_offs)
-    stim_locs = [stim1_locs[i] if (stim1_strengths[i]>stim2_strengths[i])
-                else stim2_locs[i] for i in range(batch_size)]
+    stim_locs = [stim1_locs[i] if (stim1_strengths[i] > stim2_strengths[i])
+                 else stim2_locs[i] for i in range(batch_size)]
     trial.add('out', stim_locs, ons=fix_offs)
-
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim1_ons),
-                   'stim1'     : (stim1_ons, stim1_offs),
-                   'delay1'   : (stim1_offs, stim2_ons),
-                   'stim2'     : (stim2_ons, stim2_offs),
-                   'delay2'   : (stim2_offs, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim1_ons),
+                    'stim1': (stim1_ons, stim1_offs),
+                    'delay1': (stim1_offs, stim2_ons),
+                    'stim2': (stim2_ons, stim2_offs),
+                    'delay2': (stim2_offs, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -934,15 +929,15 @@ def _contextdelaydm(config, mode, attend_mod, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
 
         # A list of locations of stimuluss, same locations for both modalities
-        stim_dist = rng.uniform(0.5*np.pi,1.5*np.pi,(batch_size,))*rng.choice([-1,1],(batch_size,))
-        stim1_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim2_locs = (stim1_locs+stim_dist)%(2*np.pi)
+        stim_dist = rng.uniform(0.5 * np.pi, 1.5 * np.pi, (batch_size,)) * rng.choice([-1, 1], (batch_size,))
+        stim1_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
+        stim2_locs = (stim1_locs + stim_dist) % (2 * np.pi)
 
-        stim_coh_range = np.array([0.08,0.16,0.32])
+        stim_coh_range = np.array([0.08, 0.16, 0.32])
         if ('easy_task' in config) and config['easy_task']:
             # stim_coh_range = np.array([0.16, 0.32, 0.64])
             stim_coh_range *= 2
@@ -963,43 +958,43 @@ def _contextdelaydm(config, mode, attend_mod, **kwargs):
             stim1_mod12_diff = stim1_strengths * \
                                np.random.uniform(0.2, 0.8, (batch_size,)) * \
                                np.random.choice([+1, -1], (batch_size,))
-            stim1_mod1_strengths = stim1_strengths + stim1_mod12_diff/2
-            stim1_mod2_strengths = stim1_strengths - stim1_mod12_diff/2
+            stim1_mod1_strengths = stim1_strengths + stim1_mod12_diff / 2
+            stim1_mod2_strengths = stim1_strengths - stim1_mod12_diff / 2
 
             stim2_mod12_diff = stim2_strengths * \
                                np.random.uniform(0.2, 0.8, (batch_size,)) * \
                                np.random.choice([+1, -1], (batch_size,))
-            stim2_mod1_strengths = stim2_strengths + stim2_mod12_diff/2
-            stim2_mod2_strengths = stim2_strengths - stim2_mod12_diff/2
+            stim2_mod1_strengths = stim2_strengths + stim2_mod12_diff / 2
+            stim2_mod2_strengths = stim2_strengths - stim2_mod12_diff / 2
 
         # Time of stimuluss on/off
-        stim1_ons  = int(rng.choice([200, 400, 600])/dt)
-        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600])/dt)
-        stim2_ons  = stim1_offs + int(rng.choice([200, 400, 800, 1600])/dt)
-        stim2_offs = stim2_ons + int(rng.choice([200, 400, 600])/dt)
-        fix_offs  = stim2_offs + int(rng.uniform(100,300)/dt)
+        stim1_ons = int(rng.choice([200, 400, 600]) / dt)
+        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600]) / dt)
+        stim2_ons = stim1_offs + int(rng.choice([200, 400, 800, 1600]) / dt)
+        stim2_offs = stim2_ons + int(rng.choice([200, 400, 600]) / dt)
+        fix_offs = stim2_offs + int(rng.uniform(100, 300) / dt)
 
         # each batch consists of sequences of equal length
-        tdim = fix_offs + int(500/dt) # longest trial
+        tdim = fix_offs + int(500 / dt)  # longest trial
 
     elif mode == 'test':
         n_stim_loc, n_stim_mod1_strength, n_stim_mod2_strength = batch_shape = 20, 5, 5
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_stim_mod1_strength, ind_stim_mod2_strength = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_stim_mod1_strength, ind_stim_mod2_strength = np.unravel_index(range(batch_size), batch_shape)
 
-        stim1_locs = 2*np.pi*ind_stim_loc/n_stim_loc
-        stim2_locs = (stim1_locs+np.pi)%(2*np.pi)
-        stim1_mod1_strengths = 0.4*ind_stim_mod1_strength/n_stim_mod1_strength+0.8
+        stim1_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        stim2_locs = (stim1_locs + np.pi) % (2 * np.pi)
+        stim1_mod1_strengths = 0.4 * ind_stim_mod1_strength / n_stim_mod1_strength + 0.8
         stim2_mod1_strengths = 2 - stim1_mod1_strengths
-        stim1_mod2_strengths = 0.4*ind_stim_mod2_strength/n_stim_mod2_strength+0.8
+        stim1_mod2_strengths = 0.4 * ind_stim_mod2_strength / n_stim_mod2_strength + 0.8
         stim2_mod2_strengths = 2 - stim1_mod2_strengths
 
-        stim1_ons = int(500/dt)
-        stim1_offs = int(1000/dt)
-        stim2_ons = int(2000/dt)
-        stim2_offs = int(2500/dt)
-        fix_offs  = int(3000/dt)
-        tdim = int(3500/dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = int(1000 / dt)
+        stim2_ons = int(2000 / dt)
+        stim2_offs = int(2500 / dt)
+        fix_offs = int(3000 / dt)
+        tdim = int(3500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -1013,21 +1008,21 @@ def _contextdelaydm(config, mode, attend_mod, **kwargs):
         # stim1_offs       = int(1000/dt)
         # stim2_ons        = int(p['stim_time']/dt) + stim1_offs
         # stim2_offs       = int(500/dt) + stim2_ons
-        stim1_ons        = int(300/dt)
-        stim1_offs       = int(600/dt)
-        stim2_ons        = int(p['stim_time']/dt) + stim1_offs
-        stim2_offs       = int(300/dt) + stim2_ons
+        stim1_ons = int(300 / dt)
+        stim1_offs = int(600 / dt)
+        stim2_ons = int(p['stim_time'] / dt) + stim1_offs
+        stim2_offs = int(300 / dt) + stim2_ons
         batch_size = len(stim1_locs)
 
         # Time of stimuluss on/off
-        fix_offs = int(200/dt) + stim2_offs
-        tdim = int(300/dt) + fix_offs
+        fix_offs = int(200 / dt) + stim2_offs
+        tdim = int(300 / dt) + fix_offs
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons  = fix_offs + int(100/dt)
+    check_ons = fix_offs + int(100 / dt)
 
     if attend_mod == 1:
         stim1_strengths, stim2_strengths = stim1_mod1_strengths, stim2_mod1_strengths
@@ -1044,18 +1039,18 @@ def _contextdelaydm(config, mode, attend_mod, **kwargs):
     trial.add('stim', stim1_locs, ons=stim1_ons, offs=stim1_offs, strengths=stim1_mod2_strengths, mods=2)
     trial.add('stim', stim2_locs, ons=stim2_ons, offs=stim2_offs, strengths=stim2_mod2_strengths, mods=2)
     trial.add('fix_out', offs=fix_offs)
-    stim_locs = [stim1_locs[i] if (stim1_strengths[i]>stim2_strengths[i])
-                else stim2_locs[i] for i in range(batch_size)]
+    stim_locs = [stim1_locs[i] if (stim1_strengths[i] > stim2_strengths[i])
+                 else stim2_locs[i] for i in range(batch_size)]
     trial.add('out', stim_locs, ons=fix_offs)
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim1_ons),
-                   'stim1'     : (stim1_ons, stim1_offs),
-                   'delay1'   : (stim1_offs, stim2_ons),
-                   'stim2'     : (stim2_ons, stim2_offs),
-                   'delay2'   : (stim2_offs, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim1_ons),
+                    'stim1': (stim1_ons, stim1_offs),
+                    'delay1': (stim1_offs, stim2_ons),
+                    'stim2': (stim2_ons, stim2_offs),
+                    'delay2': (stim2_offs, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -1103,54 +1098,54 @@ def dms_(config, mode, matchnogo, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
 
-        stim1_mod  = rng.choice([1,2])
-        stim2_mod  = rng.choice([1,2])
+        stim1_mod = rng.choice([1, 2])
+        stim2_mod = rng.choice([1, 2])
         # A list of locations of stimuluss
         # Since stim1 is always shown first, it's important that we completely randomize their relative positions
-        matchs    = rng.choice([0,1],(batch_size,)) # match or not?
+        matchs = rng.choice([0, 1], (batch_size,))  # match or not?
         # stim_dist range between 1/18*pi and (2-1/18*pi), corresponding to 10 degree to 350 degree
-        stim_dist  = rng.uniform(np.pi/9,np.pi*17./9.,(batch_size,))*rng.choice([-1,1],(batch_size,))
-        stim1_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim2_locs = (stim1_locs+stim_dist*(1-matchs))%(2*np.pi)
+        stim_dist = rng.uniform(np.pi / 9, np.pi * 17. / 9., (batch_size,)) * rng.choice([-1, 1], (batch_size,))
+        stim1_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
+        stim2_locs = (stim1_locs + stim_dist * (1 - matchs)) % (2 * np.pi)
 
         # Time of stimuluss on/off
-        stim1_ons  = int(rng.choice([200, 400, 600])/dt)
-        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600])/dt)
-        stim2_ons  = stim1_offs + int(rng.choice([200, 400, 800, 1600])/dt)
-        tdim       = stim2_ons + int(500/dt)
+        stim1_ons = int(rng.choice([200, 400, 600]) / dt)
+        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600]) / dt)
+        stim2_ons = stim1_offs + int(rng.choice([200, 400, 800, 1600]) / dt)
+        tdim = stim2_ons + int(500 / dt)
 
     elif mode == 'test':
         # Set this test so the model always respond
         n_stim_loc, n_mod1, n_mod2 = batch_shape = 20, 2, 2
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_mod1, ind_mod2 = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_mod1, ind_mod2 = np.unravel_index(range(batch_size), batch_shape)
 
         stim1_mod = ind_mod1 + 1
         stim2_mod = ind_mod2 + 1
 
-        stim1_locs = 2*np.pi*ind_stim_loc/n_stim_loc
-        matchs = (1 - matchnogo)*np.ones(batch_size) # make sure the response is Go
-        stim2_locs = (stim1_locs+np.pi*(1-matchs))%(2*np.pi)
+        stim1_locs = 2 * np.pi * ind_stim_loc / n_stim_loc
+        matchs = (1 - matchnogo) * np.ones(batch_size)  # make sure the response is Go
+        stim2_locs = (stim1_locs + np.pi * (1 - matchs)) % (2 * np.pi)
 
-        stim1_ons  = int(500/dt)
-        stim1_offs = stim1_ons + int(500/dt)
-        stim2_ons  = stim1_offs + int(1200/dt)
-        tdim = stim2_ons + int(500/dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = stim1_ons + int(500 / dt)
+        stim2_ons = stim1_offs + int(1200 / dt)
+        tdim = stim2_ons + int(500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
         stim1_locs = p['stim1_locs']
         stim2_locs = p['stim2_locs']
-        matchs = get_dist(stim1_locs-stim2_locs)<np.pi/36. # 5 degree
+        matchs = get_dist(stim1_locs - stim2_locs) < np.pi / 36.  # 5 degree
         batch_size = len(stim1_locs)
 
-        tdim = int(2500/dt)
-        stim1_ons  = int(500/dt)
-        stim1_offs = int(800/dt)
-        stim2_ons  = int(2000/dt)
+        tdim = int(2500 / dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = int(800 / dt)
+        stim2_ons = int(2000 / dt)
         stim1_mod = 1
         stim2_mod = 1
 
@@ -1158,7 +1153,7 @@ def dms_(config, mode, matchnogo, **kwargs):
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons = stim2_ons + int(100/dt)
+    check_ons = stim2_ons + int(100 / dt)
 
     trial = Trial(config, tdim, batch_size)
 
@@ -1169,24 +1164,23 @@ def dms_(config, mode, matchnogo, **kwargs):
     if hasattr(stim2_ons, '__iter__'):
         fix_out_offs = list(stim2_ons)
     else:
-        fix_out_offs = [stim2_ons]*batch_size
-    out_offs = [None]*batch_size
+        fix_out_offs = [stim2_ons] * batch_size
+    out_offs = [None] * batch_size
 
     for i in range(batch_size):
-        if matchs[i] == matchnogo: # If match
-            fix_out_offs[i] = None # Keep fixation
-            out_offs[i] = 0 # And don't go to stimulus location
-
+        if matchs[i] == matchnogo:  # If match
+            fix_out_offs[i] = None  # Keep fixation
+            out_offs[i] = 0  # And don't go to stimulus location
 
     trial.add('fix_out', offs=fix_out_offs)
     trial.add('out', stim2_locs, ons=stim2_ons, offs=out_offs)
 
     trial.add_c_mask(pre_offs=stim2_ons, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim1_ons),
-                   'stim1'     : (stim1_ons, stim1_offs),
-                   'delay1'   : (stim1_offs, stim2_ons),
-                   'go1'      : (stim2_ons, None)}
+    trial.epochs = {'fix1': (None, stim1_ons),
+                    'stim1': (stim1_ons, stim1_offs),
+                    'delay1': (stim1_offs, stim2_ons),
+                    'go1': (stim2_ons, None)}
 
     return trial
 
@@ -1226,46 +1220,48 @@ def dmc_(config, mode, matchnogo, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
         # each batch consists of sequences of equal length
 
         # Use only mod 1 for input
-        stim1_mod  = rng.choice([1,2])
-        stim2_mod  = rng.choice([1,2])
+        stim1_mod = rng.choice([1, 2])
+        stim2_mod = rng.choice([1, 2])
         # A list of locations of stimuluss
         # Since stim1 is always shown first, it's important that we completely randomize their relative positions
         # stim1_locs = rng.uniform(0, 2*np.pi, (batch_size,))
         # stim2_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
-        stim2_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
+        stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9]) * np.pi,
+                                size=(batch_size,))
+        stim2_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9]) * np.pi,
+                                size=(batch_size,))
 
         # Time of stimuluss on/off
-        stim1_ons  = int(rng.choice([200, 400, 600])/dt)
-        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600])/dt)
-        stim2_ons  = stim1_offs + int(rng.choice([200, 400, 800, 1600])/dt)
-        tdim       = stim2_ons + int(rng.choice([200, 400, 600])/dt)
+        stim1_ons = int(rng.choice([200, 400, 600]) / dt)
+        stim1_offs = stim1_ons + int(rng.choice([200, 400, 600]) / dt)
+        stim2_ons = stim1_offs + int(rng.choice([200, 400, 800, 1600]) / dt)
+        tdim = stim2_ons + int(rng.choice([200, 400, 600]) / dt)
 
     elif mode == 'test':
         # Set this test so the model always respond
         n_stim_loc, n_mod1, n_mod2 = batch_shape = 20, 2, 2
         batch_size = np.prod(batch_shape)
-        ind_stim_loc, ind_mod1, ind_mod2 = np.unravel_index(range(batch_size),batch_shape)
+        ind_stim_loc, ind_mod1, ind_mod2 = np.unravel_index(range(batch_size), batch_shape)
 
         stim1_mod = ind_mod1 + 1
         stim2_mod = ind_mod2 + 1
 
-        n_stim_loc2 = n_stim_loc/2
-        stim1_locs_ = np.concatenate(((0.1+0.8*np.arange(n_stim_loc2)/n_stim_loc2),
-                                    (1.1+0.8*np.arange(n_stim_loc2)/n_stim_loc2)))*np.pi
+        n_stim_loc2 = n_stim_loc / 2
+        stim1_locs_ = np.concatenate(((0.1 + 0.8 * np.arange(n_stim_loc2) / n_stim_loc2),
+                                      (1.1 + 0.8 * np.arange(n_stim_loc2) / n_stim_loc2))) * np.pi
         stim1_locs = np.array([stim1_locs_[i] for i in ind_stim_loc])
-        matchs = (1 - matchnogo)*np.ones(batch_size) # make sure the response is Go
-        stim2_locs = (stim1_locs+np.pi*(1-matchs))%(2*np.pi)
+        matchs = (1 - matchnogo) * np.ones(batch_size)  # make sure the response is Go
+        stim2_locs = (stim1_locs + np.pi * (1 - matchs)) % (2 * np.pi)
 
-        stim1_ons  = int(500/dt)
-        stim1_offs = stim1_ons + int(500/dt)
-        stim2_ons  = stim1_offs + int(1200/dt)
-        tdim = stim2_ons + int(500/dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = stim1_ons + int(500 / dt)
+        stim2_ons = stim1_offs + int(1200 / dt)
+        tdim = stim2_ons + int(500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -1273,10 +1269,10 @@ def dmc_(config, mode, matchnogo, **kwargs):
         stim2_locs = p['stim2_locs']
         batch_size = len(stim1_locs)
 
-        tdim = int(2500/dt)
-        stim1_ons  = int(500/dt)
-        stim1_offs = int(800/dt)
-        stim2_ons  = int(2000/dt)
+        tdim = int(2500 / dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = int(800 / dt)
+        stim2_ons = int(2000 / dt)
         stim1_mod = 1
         stim2_mod = 1
 
@@ -1284,11 +1280,11 @@ def dmc_(config, mode, matchnogo, **kwargs):
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons = stim2_ons + int(100/dt)
+    check_ons = stim2_ons + int(100 / dt)
 
-    stim1_cats = stim1_locs<np.pi # Category of stimulus 1
-    stim2_cats = stim2_locs<np.pi # Category of stimulus 2
-    matchs    = stim1_cats==stim2_cats
+    stim1_cats = stim1_locs < np.pi  # Category of stimulus 1
+    stim2_cats = stim2_locs < np.pi  # Category of stimulus 2
+    matchs = stim1_cats == stim2_cats
 
     trial = Trial(config, tdim, batch_size)
 
@@ -1299,24 +1295,23 @@ def dmc_(config, mode, matchnogo, **kwargs):
     if hasattr(stim2_ons, '__iter__'):
         fix_out_offs = list(stim2_ons)
     else:
-        fix_out_offs = [stim2_ons]*batch_size
-    out_offs = [None]*batch_size
+        fix_out_offs = [stim2_ons] * batch_size
+    out_offs = [None] * batch_size
 
     for i in range(batch_size):
-        if matchs[i] == matchnogo: # If match
-            fix_out_offs[i] = None # Keep fixation
-            out_offs[i] = 0 # And don't go to stimulus location
-
+        if matchs[i] == matchnogo:  # If match
+            fix_out_offs[i] = None  # Keep fixation
+            out_offs[i] = 0  # And don't go to stimulus location
 
     trial.add('fix_out', offs=fix_out_offs)
     trial.add('out', stim2_locs, ons=stim2_ons, offs=out_offs)
 
     trial.add_c_mask(pre_offs=stim2_ons, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim1_ons),
-                   'stim1'     : (stim1_ons, stim1_offs),
-                   'delay1'   : (stim1_offs, stim2_ons),
-                   'go1'      : (stim2_ons, None)}
+    trial.epochs = {'fix1': (None, stim1_ons),
+                    'stim1': (stim1_ons, stim1_offs),
+                    'delay1': (stim1_offs, stim2_ons),
+                    'go1': (stim2_ons, None)}
 
     return trial
 
@@ -1347,32 +1342,33 @@ def oic(config, mode, **kwargs):
 
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
         # each batch consists of sequences of equal length
         # A list of locations of stimuluss
-        stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
+        stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9]) * np.pi,
+                                size=(batch_size,))
 
         # Color stimulus
 
-        stim2_locs = rng.uniform(0, 2*np.pi, (batch_size,))
-        stim3_locs = (stim2_locs+np.pi)%(2*np.pi)
+        stim2_locs = rng.uniform(0, 2 * np.pi, (batch_size,))
+        stim3_locs = (stim2_locs + np.pi) % (2 * np.pi)
 
         # Time of stimuluss on/off
-        stim1_ons  = int(rng.uniform(100,600)/dt)
-        fix_offs  = stim1_ons + int(1000/dt)
+        stim1_ons = int(rng.uniform(100, 600) / dt)
+        fix_offs = stim1_ons + int(1000 / dt)
 
-        tdim = fix_offs + int(500/dt)
+        tdim = fix_offs + int(500 / dt)
 
     elif mode == 'test':
         batch_size = a = 128
-        stim1_locs = np.concatenate(((0.1+0.8*np.arange(a)/a),(1.1+0.8*np.arange(a)/a)))*np.pi
+        stim1_locs = np.concatenate(((0.1 + 0.8 * np.arange(a) / a), (1.1 + 0.8 * np.arange(a) / a))) * np.pi
         stim2_locs = stim1_locs
-        stim3_locs = (stim2_locs+np.pi)%(2*np.pi)
+        stim3_locs = (stim2_locs + np.pi) % (2 * np.pi)
 
-        stim1_ons  = int(500/dt)
-        fix_offs  = stim1_ons + int(1000/dt)
-        tdim = fix_offs + int(500/dt)
+        stim1_ons = int(500 / dt)
+        fix_offs = stim1_ons + int(1000 / dt)
+        tdim = fix_offs + int(500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -1381,17 +1377,17 @@ def oic(config, mode, **kwargs):
         stim3_locs = p['stim3_locs']
         batch_size = len(stim1_locs)
 
-        stim1_ons  = int(500/dt)
-        fix_offs  = stim1_ons + int(1000/dt)
-        tdim = fix_offs + int(500/dt)
+        stim1_ons = int(500 / dt)
+        fix_offs = stim1_ons + int(1000 / dt)
+        tdim = fix_offs + int(500 / dt)
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons = fix_offs + int(100/dt)
+    check_ons = fix_offs + int(100 / dt)
 
-    stim1_cats = stim1_locs<np.pi # Category of stimulus 1
+    stim1_cats = stim1_locs < np.pi  # Category of stimulus 1
 
     trial = Trial(config, tdim, batch_size)
 
@@ -1413,9 +1409,9 @@ def oic(config, mode, **kwargs):
 
     trial.add_c_mask(pre_offs=fix_offs, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim1_ons),
-                   'stim1'     : (stim1_ons, fix_offs),
-                   'go1'      : (fix_offs, None)}
+    trial.epochs = {'fix1': (None, stim1_ons),
+                    'stim1': (stim1_ons, fix_offs),
+                    'go1': (fix_offs, None)}
 
     return trial
 
@@ -1443,29 +1439,31 @@ def delaymatchcategory_original(config, mode, **kwargs):
     '''
     dt = config['dt']
     rng = config['rng']
-    if mode == 'random': # Randomly generate parameters
+    if mode == 'random':  # Randomly generate parameters
         batch_size = kwargs['batch_size']
         # each batch consists of sequences of equal length
 
         # Use only ring 1 for stimulus input to be consistent with OIC
-        stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
-        stim2_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
+        stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9]) * np.pi,
+                                size=(batch_size,))
+        stim2_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9]) * np.pi,
+                                size=(batch_size,))
 
         # Time of stimuluss on/off
-        stim1_ons  = int(rng.uniform(100,600)/dt)
-        stim1_offs = stim1_ons + int(1000/dt)
-        stim2_ons  = stim1_offs + int(1000/dt)
-        tdim = stim2_ons + int(500/dt)
+        stim1_ons = int(rng.uniform(100, 600) / dt)
+        stim1_offs = stim1_ons + int(1000 / dt)
+        stim2_ons = stim1_offs + int(1000 / dt)
+        tdim = stim2_ons + int(500 / dt)
 
     elif mode == 'test':
         # Set this test so the model always respond
         batch_size = a = 128
-        stim1_locs = np.concatenate(((0.1+0.8*np.arange(a)/a),(1.1+0.8*np.arange(a)/a)))*np.pi
+        stim1_locs = np.concatenate(((0.1 + 0.8 * np.arange(a) / a), (1.1 + 0.8 * np.arange(a) / a))) * np.pi
         stim2_locs = stim1_locs
-        stim1_ons  = int(500/dt)
-        stim1_offs = stim1_ons + int(1000/dt)
-        stim2_ons  = stim1_offs + int(rng.uniform(800,1200)/dt)
-        tdim = stim2_ons + int(500/dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = stim1_ons + int(1000 / dt)
+        stim2_ons = stim1_offs + int(rng.uniform(800, 1200) / dt)
+        tdim = stim2_ons + int(500 / dt)
 
     elif mode == 'psychometric':
         p = kwargs['params']
@@ -1473,20 +1471,20 @@ def delaymatchcategory_original(config, mode, **kwargs):
         stim2_locs = p['stim2_locs']
         batch_size = len(stim1_locs)
 
-        tdim = int(3000/dt)
-        stim1_ons  = int(500/dt)
-        stim1_offs = int(1500/dt)
-        stim2_ons  = int(2500/dt)
+        tdim = int(3000 / dt)
+        stim1_ons = int(500 / dt)
+        stim1_offs = int(1500 / dt)
+        stim2_ons = int(2500 / dt)
 
     else:
         raise ValueError('Unknown mode: ' + str(mode))
 
     # time to check the saccade location
-    check_ons = stim2_ons + int(100/dt)
+    check_ons = stim2_ons + int(100 / dt)
 
-    stim1_cats = stim1_locs<np.pi # Category of stimulus 1
-    stim2_cats = stim2_locs<np.pi # Category of stimulus 2
-    matchs    = stim1_cats==stim2_cats
+    stim1_cats = stim1_locs < np.pi  # Category of stimulus 1
+    stim2_cats = stim2_locs < np.pi  # Category of stimulus 2
+    matchs = stim1_cats == stim2_cats
 
     trial = Trial(config, tdim, batch_size)
 
@@ -1497,24 +1495,23 @@ def delaymatchcategory_original(config, mode, **kwargs):
     if hasattr(stim2_ons, '__iter__'):
         fix_out_offs = list(stim2_ons)
     else:
-        fix_out_offs = [stim2_ons]*batch_size
-    out_offs = [None]*batch_size
+        fix_out_offs = [stim2_ons] * batch_size
+    out_offs = [None] * batch_size
 
     for i in range(batch_size):
-        if matchs[i] == 0: # If non-match
-            fix_out_offs[i] = None # Keep fixation
-            out_offs[i] = 0 # And don't go to stimulus location
-
+        if matchs[i] == 0:  # If non-match
+            fix_out_offs[i] = None  # Keep fixation
+            out_offs[i] = 0  # And don't go to stimulus location
 
     trial.add('fix_out', offs=fix_out_offs)
     trial.add('out', stim2_locs, ons=stim2_ons, offs=out_offs)
 
     trial.add_c_mask(pre_offs=stim2_ons, post_ons=check_ons)
 
-    trial.epochs = {'fix1'     : (None, stim1_ons),
-                   'stim1'     : (stim1_ons, stim1_offs),
-                   'delay1'   : (stim1_offs, stim2_ons),
-                   'go1'      : (stim2_ons, None)}
+    trial.epochs = {'fix1': (None, stim1_ons),
+                    'stim1': (stim1_ons, stim1_offs),
+                    'delay1': (stim1_offs, stim2_ons),
+                    'go1': (stim2_ons, None)}
 
     return trial
 
@@ -1543,30 +1540,30 @@ rule_mapping = {'testinit': test_init,
                 'oic': oic,
                 'dmc': delaymatchcategory_original}
 
-rule_name    = {'reactgo': 'RT Go',
-                'delaygo': 'Dly Go',
-                'fdgo': 'Go',
-                'dm1': 'DM 1',
-                'dm2': 'DM 2',
-                'contextdm1': 'Ctx DM 1',
-                'contextdm2': 'Ctx DM 2',
-                'multidm': 'MultSen DM',
-                'delaydm1': 'Dly DM 1',
-                'delaydm2': 'Dly DM 2',
-                'contextdelaydm1': 'Ctx Dly DM 1',
-                'contextdelaydm2': 'Ctx Dly DM 2',
-                'multidelaydm': 'MultSen Dly DM',
-                'reactanti': 'RT Anti',
-                'delayanti': 'Dly Anti',
-                'fdanti': 'Anti',
-                'dmsgo': 'DMS',
-                'dmsnogo': 'DNMS',
-                'dmcgo': 'DMC',
-                'dmcnogo': 'DNMC',
-                'oic': '1IC',
-                'dmc': 'DMC',
-                'mnist': 'mnist'
-                }
+rule_name = {'reactgo': 'RT Go',
+             'delaygo': 'Dly Go',
+             'fdgo': 'Go',
+             'dm1': 'DM 1',
+             'dm2': 'DM 2',
+             'contextdm1': 'Ctx DM 1',
+             'contextdm2': 'Ctx DM 2',
+             'multidm': 'MultSen DM',
+             'delaydm1': 'Dly DM 1',
+             'delaydm2': 'Dly DM 2',
+             'contextdelaydm1': 'Ctx Dly DM 1',
+             'contextdelaydm2': 'Ctx Dly DM 2',
+             'multidelaydm': 'MultSen Dly DM',
+             'reactanti': 'RT Anti',
+             'delayanti': 'Dly Anti',
+             'fdanti': 'Anti',
+             'dmsgo': 'DMS',
+             'dmsnogo': 'DNMS',
+             'dmcgo': 'DMC',
+             'dmcnogo': 'DNMC',
+             'oic': '1IC',
+             'dmc': 'DMC',
+             'mnist': 'mnist'
+             }
 
 
 def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
@@ -1585,7 +1582,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
     # TODO: WINNIE ADD, IF CORRECT KEEP, IF NOT DELETE
     if mode == 'test':
         if config['current_step'] == None:
-            config['current_step'] = config['seed'] # change later if not correct!!!!!!!!!!!!!!!!!!!
+            config['current_step'] = config['seed']  # change later if not correct!!!!!!!!!!!!!!!!!!!
 
     if rule == 'mnist':
         trial = _mnist(config, mode, **kwargs)
@@ -1600,7 +1597,7 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
         rule_on = None
     if 'rule_off' in kwargs:
         rule_off = kwargs['rule_off']
-    else: # default behavior
+    else:  # default behavior
         rule_off = None
 
     # overwrite current rule for input
@@ -1627,13 +1624,13 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
             rule_strength = [1.] * len(rule)
 
     # TODO: Winnie added
-    #if rule == ['mnist']:
-     #   trial.add_rule(on=0, off=-1, strength=1)
-    #else:
-     #   for r, s in zip(rule, rule_strength):
-      #      trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
+    # if rule == ['mnist']:
+    #   trial.add_rule(on=0, off=-1, strength=1)
+    # else:
+    #   for r, s in zip(rule, rule_strength):
+    #      trial.add_rule(r, on=rule_on, off=rule_off, strength=s)
 
-    #if noise_on:
-     #   trial.add_x_noise()
+    # if noise_on:
+    #   trial.add_x_noise()
 
     return trial

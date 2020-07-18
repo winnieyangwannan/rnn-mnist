@@ -12,6 +12,7 @@ import tools
 from matplotlib.pyplot import *
 from mnist_task import *
 import matplotlib.pylab as pl
+from mpl_toolkits.mplot3d import Axes3D
 
 def pretty_singleneuron_plot_mnist(model_dir,save_dir, plot_type):
     """Plot the activity of a single neuron in time across many trials
@@ -158,13 +159,11 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
 
     model = Model(model_dir, dt=1)
     hp = model.hp
-    hp['batch_size_test'] = 40
+    hp['batch_size_test'] = 100
+    hp['current_step'] = 0
 
     with tf.Session() as sess:
         model.restore()
-
-        # TODO: winnie add
-        hp['current_step'] = hp['seed']
 
         trial = generate_trials(rule, hp, mode='test')
         feed_dict = tools.gen_feed_dict(model, trial, hp)
@@ -172,32 +171,6 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
         # TODO: Winnie added
         y = trial.y
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
-
-        #n_eachring = hp['n_eachring']
-        #n_hidden = hp['n_rnn']
-        # Plot Units
-        #for i in range(hp['batch_size_test']):
-         #   fig = plt.figure(figsize=(1.0, 0.8))
-          #  ax = fig.add_axes([0.2, 0.1, 0.7, 0.75])
-           # plt.xticks([])
-            ## Fixed style for these plots
-            #ax.tick_params(axis='both', which='major', labelsize=fontsize,
-             #              width=0.5, length=2, pad=3)
-            #ax.spines["left"].set_linewidth(0.5)
-            #ax.spines["right"].set_visible(False)
-            #ax.spines["bottom"].set_visible(False)
-            #ax.spines["top"].set_visible(False)
-            #ax.xaxis.set_ticks_position('bottom')
-            #ax.yaxis.set_ticks_position('left')
-
-            #plt.imshow(h[:, i, :].T, aspect='auto', cmap=cmap, vmin=0, vmax=1,
-            #          interpolation='none', origin='lower')
-            #plt.yticks([0, n_hidden-1], ['1', str(n_hidden)], rotation='horizontal')
-            #plt.title('Recurrent units', fontsize=fontsize, y=0.95)
-            #ax.get_yaxis().set_label_coords(-0.12, 0.5)
-            #plt.savefig(save_dir + 'schematic_units_mnist' + str(i) + '_.pdf', transparent=True)
-            #plt.show()
-        #plt.close('all')
 
         # Plot input and output
         # TODO: WIinnie added
@@ -253,8 +226,96 @@ def schematic_plot_mnist(model_dir, save_dir, plot_time, rule=None):
         plt.close('all')
 
 
+def plot_connectivity(model_dir, save_dir):
+    import networkx as nx
+
+    model = Model(model_dir)
+    hp = model.hp
+
+    with tf.Session() as sess:
+        model.restore()
+        # get all connection weights and biases as tensorflow variables
+        w_in, w_rec, w_out = sess.run([model.w_sen_in, model.w_rec, model.w_out])
 
 
+    fig = plt.figure(figsize=(6, 6))
+    for uu in range(hp['n_rnn']):
+        ax = fig.add_subplot(4, 5, uu+1)
+        plt.imshow(w_in[:, uu].reshape(28, 28))
+
+        ax.set_title('unit ' + str(uu+1), fontsize=6)
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        ax.spines["left"].set_visible(False)
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    plt.tight_layout()
+    fig.suptitle('W_in', fontsize=6)
+    fig.savefig(save_dir + 'w_in.pdf')
+    plt.show()
+
+
+def plot_activity_pca(model_dir, save_dir):
+    model = Model(model_dir)
+    hp = model.hp
+
+    # Generate a batch of trial from the test mode
+    hp['current_step'] = 0
+    hp['batch_size_test'] = 100
+
+    _, x_test, _, y_test = load_mnist_data()
+    x_test = x_test[0:100]
+    y_test = y_test[0:100]
+
+    with tf.Session() as sess:
+        model.restore()
+
+        trial = generate_trials('mnist', hp, mode='test')
+        feed_dict = tools.gen_feed_dict(model, trial, hp)
+        h, y, y_hat = sess.run([model.h, model.y, model.y_hat], feed_dict=feed_dict)
+
+        colors = pl.cm.tab10(np.arange(0, 10))
+        fig = plt.figure(figsize=(6, 6))
+        ax = Axes3D(fig)
+        for i in [0, 1, 2, 3, 4, 5, 6, 7, 9]:
+
+            _, plot_indexs = filter_digit(x_test, y_test, i)
+
+            u, s, vh = np.linalg.svd(h[20:, plot_indexs[0], :], full_matrices=True)
+            proj_h = vh[0:3, :].dot(h[20:, plot_indexs[0], :].T)
+
+            ax.plot3D(proj_h[0, :], proj_h[1, :], proj_h[2, :], label=i, color=colors[i])
+            ax.scatter(proj_h[0, 0], proj_h[1, 0], proj_h[2, 0], marker='.', color=colors[i])
+            ax.scatter(proj_h[0, -1], proj_h[1, -1], proj_h[2, -1], marker='v', color=colors[i])
+
+        plt.legend()
+        fig.savefig(save_dir + 'activity_PCA_' + '.pdf')
+        plt.show()
+
+
+        # plot each digit in separate graph
+        colors = pl.cm.tab20(np.arange(0, 20))
+        for i in [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]:
+            fig = plt.figure(figsize=(6, 6))
+            ax = Axes3D(fig)
+
+            _, plot_indexs = filter_digit(x_test, y_test, i)
+
+            for idx, ii in enumerate(plot_indexs):
+
+                u, s, vh = np.linalg.svd(h[20:, ii, :], full_matrices=True)
+                proj_h = vh[0:3, :].dot(h[20:, ii, :].T)
+
+                ax.plot3D(proj_h[0, :], proj_h[1, :], proj_h[2, :], color=colors[idx], label=ii)
+                ax.scatter(proj_h[0, 0], proj_h[1, 0], proj_h[2, 0], color=colors[idx], marker='.')
+                ax.scatter(proj_h[0, -1], proj_h[1, -1], proj_h[2, -1], color=colors[idx], marker='v')
+
+            plt.legend()
+            fig.savefig(save_dir + 'activity_PCA_' + str(i) + '.pdf')
+            plt.show()
 
 def easy_activity_plot(model_dir, rule):
     """A simple plot of neural activity from one task.
@@ -424,42 +485,6 @@ def pretty_inputoutput_plot(model_dir, rule, save=False, plot_ylabel=False):
             plt.savefig(save_name, transparent=True)
         plt.show()
 
-def activation_patter_plot_mnist(model_dir, save_dir):
-    model = Model(model_dir)
-    hp = model.hp
-    colors = pl.cm.RdPu(np.linspace(0, 1, 10))
-
-    with tf.Session() as sess:
-        model.restore()
-
-        # Generate a batch of trial from the test mode
-        hp['current_step'] = 0
-        hp['batch_size_test'] = 1000
-        trial = generate_trials('mnist', hp, mode='test')
-        feed_dict = tools.gen_feed_dict(model, trial, hp)
-        x, h, y, y_hat = sess.run([model.x, model.h, model.y, model.y_hat], feed_dict=feed_dict)
-        #indexes_test = filter_digit(model.x, y, 3)
-        #indexes_test = index_each_category(y[-1][:, 1:], max_num=1.05)
-
-        _, x_test, _, y_test = load_mnist_data()
-        x_test = x_test[0:1000]
-        y_test = y_test[0:1000]
-
-        fig = plt.figure(figsize=(6, 6))
-        for i in range(10):
-            ax = fig.add_subplot(5, 2, i+1)
-            _, indexs = filter_digit(x_test, y_test, i)
-            im = ax.imshow(h[-1, indexs, :].mean(axis=0).reshape(20, -1))
-            ax.set_title(str(i))
-
-            ax.set_xticks([])
-            ax.set_yticks([])
-        plt.colorbar(im)
-        plt.tight_layout()
-        fig.savefig(save_dir + 'activation_pattern.pdf')
-        plt.show()
-
-
 
 # TODO: winnie added
 def pretty_singleneuron_plot_mnist_old(model_dir,save_dir, plot_type):
@@ -495,8 +520,7 @@ def pretty_singleneuron_plot_mnist_old(model_dir,save_dir, plot_type):
         feed_dict = tools.gen_feed_dict(model, trial, hp)
         h, y, y_hat = sess.run([model.h, model.y, model.y_hat], feed_dict=feed_dict)
 
-        #indexes_test = index_each_category(y[-1][:,1:],max_num=1.05)
-        #indexes_test['0']
+
 
     for p in range(int(400 / 40)):
         fig = plt.figure(figsize=(6, 6))
@@ -636,6 +660,123 @@ def pretty_singleneuron_plot(model_dir,
             if save:
                 plt.savefig(figname, transparent=True)
             plt.show()
+
+
+def plot_connectivity(model_dir, save_dir):
+    import networkx as nx
+
+    model = Model(model_dir)
+    hp = model.hp
+
+    with tf.Session() as sess:
+        model.restore()
+        # get all connection weights and biases as tensorflow variables
+        w_in, w_rec, w_out = sess.run([model.w_sen_in, model.w_rec, model.w_out])
+
+
+
+    # plot input connectivity
+    fig = plt.figure(figsize=(6, 6))
+    for uu in range(hp['n_rnn']):
+        ax = fig.add_subplot(4, 5, uu+1)
+        plt.imshow(w_in[:, uu].reshape(28, 28))
+
+        ax.set_title('unit ' + str(uu+1), fontsize=6)
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        ax.spines["left"].set_visible(False)
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    plt.tight_layout()
+    fig.suptitle('W_in', fontsize=6)
+    fig.savefig(save_dir + 'w_in.pdf')
+    plt.show()
+
+
+
+    # plot recurrent connectivity
+    fig = plt.figure(figsize=(6, 6))
+    ax = fig.add_axes([0.1, 0.25, 0.6, 0.6])
+    plt.imshow(w_rec)
+
+
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+
+    ax.set_xticks(np.arange(0, hp['n_rnn']))
+    ax.set_yticks(np.arange(0, hp['n_rnn']))
+    ax.set_xticklabels(np.arange(1, hp['n_rnn']+1), rotation=90)
+    ax.set_yticklabels(np.arange(1, hp['n_rnn']+1))
+
+    plt.tight_layout()
+    plt.colorbar()
+    fig.suptitle('W_rec', fontsize=12)
+    fig.savefig(save_dir + 'w_rec.pdf')
+    plt.show()
+
+
+    # plot output connectivity
+    fig = plt.figure(figsize=(6, 6))
+    for uu in range(hp['n_output']):
+        ax = fig.add_subplot(5, 2, uu + 1)
+        plt.imshow(w_out[:, uu].reshape(-1, 5))
+
+        ax.set_title(str(uu), fontsize=6)
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["bottom"].set_visible(False)
+        ax.spines["left"].set_visible(False)
+
+        ax.set_xticks([])
+        ax.set_yticks([])
+
+    plt.tight_layout()
+    fig.suptitle('W_out', fontsize=6)
+    fig.savefig(save_dir + 'w_out.pdf')
+    plt.show()
+
+
+
+def activation_patter_plot_mnist(model_dir, save_dir):
+    model = Model(model_dir)
+    hp = model.hp
+    colors = pl.cm.RdPu(np.linspace(0, 1, 10))
+
+    with tf.Session() as sess:
+        model.restore()
+
+        # Generate a batch of trial from the test mode
+        hp['current_step'] = 0
+        hp['batch_size_test'] = 1000
+        trial = generate_trials('mnist', hp, mode='test')
+        feed_dict = tools.gen_feed_dict(model, trial, hp)
+        x, h, y, y_hat = sess.run([model.x, model.h, model.y, model.y_hat], feed_dict=feed_dict)
+        #indexes_test = filter_digit(model.x, y, 3)
+        #indexes_test = index_each_category(y[-1][:, 1:], max_num=1.05)
+
+        _, x_test, _, y_test = load_mnist_data()
+        x_test = x_test[0:1000]
+        y_test = y_test[0:1000]
+
+        fig = plt.figure(figsize=(6, 6))
+        for i in range(10):
+            ax = fig.add_subplot(5, 2, i+1)
+            _, indexs = filter_digit(x_test, y_test, i)
+            im = ax.imshow(h[-1, indexs, :].mean(axis=0).reshape(20, -1))
+            ax.set_title(str(i))
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+        plt.colorbar(im)
+        plt.tight_layout()
+        fig.savefig(save_dir + 'activation_pattern.pdf')
+        plt.show()
+
 
 
 def activity_histogram(model_dir,
@@ -827,7 +968,7 @@ def schematic_plot(model_dir, save_dir, rule=None):
     plt.savefig(save_dir + 'schematic_outputs.pdf', transparent=True)
     plt.show()
 
-def networkx_illustration(model_dir):
+def networkx_illustration(model_dir, save_dir):
     import networkx as nx
 
     model = Model(model_dir)
@@ -862,7 +1003,8 @@ def networkx_illustration(model_dir):
             edge_color=color,
             edge_cmap=plt.cm.RdBu_r,
             ax=ax)
-    plt.savefig('figure/illustration_networkx.pdf', transparent=True)
+    plt.savefig(save_dir + '/illustration_networkx.pdf', transparent=True)
+    plt.show()
 
 
 if __name__ == "__main__":

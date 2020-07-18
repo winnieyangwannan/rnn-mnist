@@ -32,10 +32,9 @@ def get_default_hp(ruleset):
     else:
         n_eachring = 32
 
-
-    #TODO: Winnie changed
+    # TODO: Winnie changed
     if ruleset == 'mnist':
-        n_input, n_output = 1 + n_rule + 784, 10+1
+        n_input, n_output = 1 + n_rule + 784, 10 + 1
         batch_size_train = 60
         batch_size_test = 400
         batch_size_vali = 60
@@ -46,7 +45,6 @@ def get_default_hp(ruleset):
         batch_size_train = 64
         batch_size_test = 512
         EPOCHS = 1
-
 
     hp = {
         # batch size for training
@@ -140,7 +138,6 @@ def do_eval(sess, model, log, rule_train):
     print('Trial {:7d}'.format(log['trials'][-1]) +
           '  | Time {:0.2f} s'.format(log['times'][-1]) +
           '  | Now training ' + rule_name_print)
-
 
     for rule_test in hp['rules']:
         clsq_tmp = list()
@@ -293,8 +290,7 @@ def train(model_dir,
     if ruleset == 'mnist':
         hp['rule_trains'] = ['mnist']
         hp['rules'] = hp['rule_trains']
-        max_steps = 100  #because there is 60000 training examples
-
+        max_steps = 100  # because there is 60000 training examples
 
     tools.save_hp(hp, model_dir)
 
@@ -374,10 +370,10 @@ def train(model_dir,
                     # if log['perf_avg'][-1] > model.hp['target_perf']:
                     # check if minimum performance is above target
                     # TODO: winnie changed
-                    #if log['perf_min'][-1] > model.hp['target_perf']:
-                     #   print('Perf reached the target: {:0.2f}'.format(
-                      #      hp['target_perf']))
-                       # break
+                    # if log['perf_min'][-1] > model.hp['target_perf']:
+                    #   print('Perf reached the target: {:0.2f}'.format(
+                    #      hp['target_perf']))
+                    # break
 
                     if rich_output:
                         display_rich_output(model, sess, step, log, model_dir)
@@ -388,7 +384,7 @@ def train(model_dir,
                     rule_train_now = 'mnist'
                 else:
                     rule_train_now = hp['rng'].choice(hp['rule_trains'],
-                                                  p=hp['rule_probs'])
+                                                      p=hp['rule_probs'])
 
                 # Generate a random batch of trials.
                 # Each batch has the same trial length
@@ -538,7 +534,6 @@ def train_sequential(
             # Keep training until reach max iterations
             while (step * hp['batch_size_train'] <=
                    rule_train_iters[i_rule_train]):
-
 
                 # Training
                 rule_train_now = hp['rng'].choice(rule_train)
@@ -714,7 +709,7 @@ if __name__ == '__main__':
 
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     hp = {'activation': 'softplus',
-          'n_rnn': 400,    # 20*20
+          'n_rnn': 400,  # 20*20
           # TODO: winnie changed
           'mix_rule': False,
           'l1_h': 0.,

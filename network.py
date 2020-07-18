@@ -1,4 +1,3 @@
-
 """Definition of the network model and various RNN cells"""
 
 from __future__ import division
@@ -56,7 +55,7 @@ def tf_popvec(y):
     return tf.mod(loc, 2 * np.pi)
 
 
-def get_perf(y_hat, y_loc, hp, rule = None):
+def get_perf(y_hat, y_loc, hp, rule=None):
     """Get performance.
     Args:
       y_hat: Actual output. Numpy array (Time, Batch, Unit)
@@ -73,13 +72,13 @@ def get_perf(y_hat, y_loc, hp, rule = None):
 
     off = hp['off']
 
-    y_loc = y_loc[off]    # target y
-    y_hat = y_hat[off]    # NN y
+    y_loc = y_loc[off]  # target y
+    y_hat = y_hat[off]  # NN y
 
     # Fixation and location of y_hat
-    #y_hat_fix = y_hat[..., 0]  # NN fix
+    # y_hat_fix = y_hat[..., 0]  # NN fix
     # Fixating? Correctly saccading?
-    #fixating = y_hat_fix > 0.5
+    # fixating = y_hat_fix > 0.5
 
     # TODO: Winnie changed
     if rule == 'mnist':
@@ -98,11 +97,11 @@ def get_perf(y_hat, y_loc, hp, rule = None):
         corr_loc = dist < 0.2 * np.pi
 
         # Should fixate?
-        #should_fix = y_loc < 0
+        # should_fix = y_loc < 0
 
         # performance
         # TODO: winnie changed
-        #perf = should_fix * fixating + (1 - should_fix) * corr_loc * (1 - fixating)
+        # perf = should_fix * fixating + (1 - should_fix) * corr_loc * (1 - fixating)
         perf = corr_loc
         return perf
 
@@ -610,9 +609,9 @@ class Model(object):
 
         self.y_hat = tf.reshape(y_hat,
                                 (-1, tf.shape(self.h)[1], n_output))
-        #y_hat_fix, y_hat_ring = tf.split(
-         #   self.y_hat, [1, n_output - 1], axis=-1)
-        #self.y_hat_loc = tf_popvec(y_hat_ring)
+        # y_hat_fix, y_hat_ring = tf.split(
+        #   self.y_hat, [1, n_output - 1], axis=-1)
+        # self.y_hat_loc = tf_popvec(y_hat_ring)
 
     def _set_weights_fused(self, hp):
         """Set model attributes for several weight variables."""
@@ -660,23 +659,22 @@ class Model(object):
         self.y = tf.placeholder("float", [None, None, n_output])
         self.c_mask = tf.placeholder("float", [None, n_output])
 
-
         # TODO: winnie changed
-        #sensory_inputs, rule_inputs = tf.split(
-         #   self.x, [hp['rule_start'], hp['n_rule']], axis=-1)
+        # sensory_inputs, rule_inputs = tf.split(
+        #   self.x, [hp['rule_start'], hp['n_rule']], axis=-1)
         sensory_inputs = self.x
 
         sensory_rnn_inputs = tf.layers.dense(sensory_inputs, n_rnn, name='sen_input')
 
-        #if 'mix_rule' in hp and hp['mix_rule'] is True:
-            # rotate rule matrix
-         #   kernel_initializer = tf.orthogonal_initializer()
-          #  rule_inputs = tf.layers.dense(
-           #     rule_inputs, hp['n_rule'], name='mix_rule',
-            #    use_bias=False, trainable=False,
-             #   kernel_initializer=kernel_initializer)
+        # if 'mix_rule' in hp and hp['mix_rule'] is True:
+        # rotate rule matrix
+        #   kernel_initializer = tf.orthogonal_initializer()
+        #  rule_inputs = tf.layers.dense(
+        #     rule_inputs, hp['n_rule'], name='mix_rule',
+        #    use_bias=False, trainable=False,
+        #   kernel_initializer=kernel_initializer)
 
-        #rule_rnn_inputs = tf.layers.dense(rule_inputs, n_rnn, name='rule_input', use_bias=False)
+        # rule_rnn_inputs = tf.layers.dense(rule_inputs, n_rnn, name='rule_input', use_bias=False)
 
         rnn_inputs = sensory_rnn_inputs
 
@@ -704,9 +702,9 @@ class Model(object):
 
         self.y_hat = tf.reshape(y_hat,
                                 (-1, tf.shape(self.h)[1], n_output))
-        #y_hat_fix, y_hat_ring = tf.split(
+        # y_hat_fix, y_hat_ring = tf.split(
         #    self.y_hat, [1, n_output - 1], axis=-1)
-        #self.y_hat_loc = tf_popvec(y_hat_ring)
+        # self.y_hat_loc = tf_popvec(y_hat_ring)
 
     def _set_weights_separate(self, hp):
         """Set model attributes for several weight variables."""
@@ -725,8 +723,8 @@ class Model(object):
                     self.w_sen_in = v
                 else:
                     self.b_in = v
-            #elif 'rule_input' in v.name:
-             #   self.w_rule = v
+            # elif 'rule_input' in v.name:
+            #   self.w_rule = v
             else:
                 assert 'output' in v.name
                 if 'kernel' in v.name or 'weight' in v.name:
@@ -747,10 +745,10 @@ class Model(object):
             raise ValueError('Shape of w_sen_in should be ' +
                              str((hp['rule_start'], n_rnn)) + ', but found ' +
                              str(self.w_sen_in.shape))
-        #if self.w_rule.shape != (hp['n_rule'], n_rnn):
-         #   raise ValueError('Shape of w_in should be ' +
-          #                   str((hp['n_rule'], n_rnn)) + ', but found ' +
-           #                  str(self.w_rule.shape))
+        # if self.w_rule.shape != (hp['n_rule'], n_rnn):
+        #   raise ValueError('Shape of w_in should be ' +
+        #                   str((hp['n_rule'], n_rnn)) + ', but found ' +
+        #                  str(self.w_rule.shape))
 
     def initialize(self):
         """Initialize the model for training."""
@@ -834,4 +832,3 @@ class Model(object):
         if verbose:
             print('Lesioned units:')
             print(units)
-

@@ -28,7 +28,7 @@ def train_mante(seed=0, model_dir='train_mante'):
 def mante_tanh(seed=0, model_dir='mante_tanh'):
     """Training of only the Mante task."""
     hp = {'activation': 'tanh',
-               'target_perf': 0.9}
+          'target_perf': 0.9}
     model_dir = os.path.join(DATAPATH, model_dir, str(seed))
     train.train(model_dir, hp=hp, ruleset='mante', seed=seed)
     # Analyses
@@ -294,7 +294,7 @@ def _base_vary_hp_mante(i, hp_ranges, base_name):
 
     # Analyses
     variance.compute_variance(model_dir)
-    
+
     log = tools.load_log(model_dir)
     analysis = clustering.Analysis(model_dir, 'rule')
     log['n_cluster'] = analysis.n_cluster
@@ -315,7 +315,7 @@ def vary_l2_init_mante(i):
     hp_ranges['activation'] = ['softplus']
     hp_ranges['rnn_type'] = ['LeakyRNN']
     hp_ranges['w_rec_init'] = ['randortho']
-    hp_ranges['l2_weight_init'] = [0, 1e-4, 2*1e-4, 4*1e-4, 8*1e-4, 1.6*1e-3]
+    hp_ranges['l2_weight_init'] = [0, 1e-4, 2 * 1e-4, 4 * 1e-4, 8 * 1e-4, 1.6 * 1e-3]
     hp_ranges['target_perf'] = [0.9]
 
     _base_vary_hp_mante(i, hp_ranges, base_name='vary_l2init_mante')
@@ -334,7 +334,7 @@ def vary_l2_weight_mante(i):
     hp_ranges['activation'] = ['softplus']
     hp_ranges['rnn_type'] = ['LeakyRNN']
     hp_ranges['w_rec_init'] = ['randortho']
-    hp_ranges['l2_weight'] = [0, 1e-4, 2*1e-4, 4*1e-4, 8*1e-4, 1.6*1e-3]
+    hp_ranges['l2_weight'] = [0, 1e-4, 2 * 1e-4, 4 * 1e-4, 8 * 1e-4, 1.6 * 1e-3]
     hp_ranges['target_perf'] = [0.9]
 
     _base_vary_hp_mante(i, hp_ranges, base_name='vary_l2weight_mante')
@@ -367,13 +367,13 @@ def pretrain(setup, seed):
     hp['w_rec_init'] = 'diag'
     hp['easy_task'] = False
     hp['activation'] = 'relu'
-    hp['max_steps'] = 2*1e6
+    hp['max_steps'] = 2 * 1e6
     hp['l1_h'] = 1e-8
     hp['target_perf'] = 0.97
     hp['n_rnn'] = 128
     hp['use_separate_input'] = True
 
-    model_dir = os.path.join(DATAPATH, 'pretrain', 'setup'+str(setup), str(seed))
+    model_dir = os.path.join(DATAPATH, 'pretrain', 'setup' + str(setup), str(seed))
     if setup == 0:
         rule_trains = ['contextdm1', 'contextdm2', 'contextdelaydm2']
     elif setup == 1:
@@ -382,14 +382,14 @@ def pretrain(setup, seed):
         raise ValueError
 
     train.train(model_dir,
-          hp=hp,
-          max_steps=hp['max_steps'],
-          display_step=500,
-          ruleset='all',
-          rule_trains=rule_trains,
-          rule_prob_map=None,
-          seed=seed,
-          )
+                hp=hp,
+                max_steps=hp['max_steps'],
+                display_step=500,
+                ruleset='all',
+                rule_trains=rule_trains,
+                rule_prob_map=None,
+                seed=seed,
+                )
 
 
 def posttrain(pretrain_setup, posttrain_setup, trainables, seed):
@@ -424,15 +424,15 @@ def posttrain(pretrain_setup, posttrain_setup, trainables, seed):
     hp['pretrain_setup'] = pretrain_setup
     hp['posttrain_setup'] = posttrain_setup
     train.train(model_dir,
-          hp=hp,
-          max_steps=hp['max_steps'],
-          display_step=50,
-          ruleset='all',
-          rule_trains=rule_trains,
-          seed=seed,
-          load_dir=load_dir,
-          trainables=hp['trainables'],
-          )
+                hp=hp,
+                max_steps=hp['max_steps'],
+                display_step=50,
+                ruleset='all',
+                rule_trains=rule_trains,
+                seed=seed,
+                load_dir=load_dir,
+                trainables=hp['trainables'],
+                )
 
 
 if __name__ == '__main__':

@@ -50,7 +50,7 @@ def write_jobfile(cmd, jobname, sbatchpath, scratchpath,
                 '#! /bin/bash\n'
                 + '\n'
                 + '#SBATCH --nodes={}\n'.format(nodes)
-                #+ '#SBATCH --ntasks=1\n'
+                # + '#SBATCH --ntasks=1\n'
                 + '#SBATCH --ntasks-per-node=1\n'
                 + '#SBATCH --cpus-per-task={}\n'.format(ppn)
                 + '#SBATCH --mem={}GB\n'.format(mem)
@@ -65,7 +65,7 @@ def write_jobfile(cmd, jobname, sbatchpath, scratchpath,
                 + '{} >> {}.log 2>&1\n'.format(cmd, logname)
                 + '\n'
                 + 'exit 0;\n'
-                )
+            )
     else:
         with open(jobfile, 'w') as f:
             f.write(
@@ -88,7 +88,7 @@ def write_jobfile(cmd, jobname, sbatchpath, scratchpath,
                 + '{} >> {}.log 2>&1\n'.format(cmd, logname)
                 + '\n'
                 + 'exit 0;\n'
-                )
+            )
     return jobfile
 
 
@@ -96,8 +96,8 @@ if args.run == 'all':
     for seed in range(0, 40):
         jobname = 'train_all_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.train_all('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_all(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -107,8 +107,8 @@ elif args.run == 'analysis_all':
     for seed in range(0, 40):
         jobname = 'analysis_all_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.train_all_analysis('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_all_analysis(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -118,8 +118,8 @@ elif args.run == 'tanhgru':
     for seed in range(0, 20):
         jobname = 'tanhgru_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.train_all_tanhgru('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_all_tanhgru(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -129,8 +129,8 @@ elif args.run == 'mixrule':
     for seed in range(0, 20):
         jobname = 'mr_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.train_all_mixrule('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_all_mixrule(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -140,8 +140,8 @@ elif args.run == 'mixrule_softplus':
     for seed in range(0, 20):
         jobname = 'mrsp_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.train_all_mixrule_softplus('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_all_mixrule_softplus(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -151,8 +151,8 @@ elif args.run == 'all_varyhp':
     for i in range(0, 20):
         jobname = 'train_varyhp_{:d}'.format(i)
         train_arg = '{:d}'.format(i)
-        cmd = r'''python -c "import experiment as e;e.train_vary_hp('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_vary_hp(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -162,8 +162,8 @@ elif args.run == 'seq':
     for i in range(0, 40):
         jobname = 'seq_{:d}'.format(i)
         train_arg = '{:d}'.format(i)
-        cmd = r'''python -c "import experiment as e;e.train_seq('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_seq(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -173,8 +173,8 @@ elif args.run == 'seq_varyhp':
     for i in range(0, 72):
         jobname = 'seq_varyhp_{:d}'.format(i)
         train_arg = '{:d}'.format(i)
-        cmd = r'''python -c "import experiment as e;e.train_vary_hp_seq('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_vary_hp_seq(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -184,8 +184,8 @@ elif args.run == 'mante':
     for seed in range(0, 20):
         jobname = 'train_mante_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.train_mante('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.train_mante(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -195,8 +195,8 @@ elif args.run == 'mante_tanh':
     for seed in range(0, 50):
         jobname = 'mantetanh_{:d}'.format(seed)
         train_arg = 'seed={:d}'.format(seed)
-        cmd = r'''python -c "import experiment as e;e.mante_tanh('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.mante_tanh(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -206,8 +206,8 @@ elif args.run == 'mante_vary_l2init':
     for i in range(0, 300):
         jobname = 'mante_vary_l2init_{:d}'.format(i)
         train_arg = '{:d}'.format(i)
-        cmd = r'''python -c "import experiment as e;e.vary_l2_init_mante('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.vary_l2_init_mante(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -217,8 +217,8 @@ elif args.run == 'mante_vary_l2weight':
     for i in range(0, 300):
         jobname = 'mante_vary_l2weight_{:d}'.format(i)
         train_arg = '{:d}'.format(i)
-        cmd = r'''python -c "import experiment as e;e.vary_l2_weight_mante('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.vary_l2_weight_mante(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -228,8 +228,8 @@ elif args.run == 'mante_vary_pweighttrain':
     for i in range(200, 260):
         jobname = 'mante_vary_pweighttrain_{:d}'.format(i)
         train_arg = '{:d}'.format(i)
-        cmd = r'''python -c "import experiment as e;e.vary_p_weight_train_mante('''+\
-              train_arg+''')"'''
+        cmd = r'''python -c "import experiment as e;e.vary_p_weight_train_mante(''' + \
+              train_arg + ''')"'''
 
         jobfile = write_jobfile(
             cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -240,8 +240,8 @@ elif args.run == 'pretrain':
         for setup in range(2):
             jobname = 'pt_{:d}_{:d}'.format(setup, seed)
             train_arg = 'setup={:d},seed={:d}'.format(setup, seed)
-            cmd = r'''python -c "import experiment as e;e.pretrain('''+\
-                  train_arg+''')"'''
+            cmd = r'''python -c "import experiment as e;e.pretrain(''' + \
+                  train_arg + ''')"'''
 
             jobfile = write_jobfile(
                 cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -256,8 +256,8 @@ elif args.run == 'posttrain':
                         pretrain_setup, posttrain_setup, trainables, seed)
                     train_arg = '{:d}, {:d}, {:d}, {:d}'.format(
                         pretrain_setup, posttrain_setup, trainables, seed)
-                    cmd = r'''python -c "import experiment as e;e.posttrain('''+\
-                          train_arg+''')"'''
+                    cmd = r'''python -c "import experiment as e;e.posttrain(''' + \
+                          train_arg + ''')"'''
 
                     jobfile = write_jobfile(
                         cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
@@ -274,9 +274,9 @@ elif args.run == 'grid':
                 jobname = 'grid{:d}_{:d}_{:d}'.format(seed, i_ksi, i_c)
                 train_arg = 'c={:0.6f}, ksi={:0.6f}, seed={:d}'.format(
                     c_intsyn, ksi_intsyn, seed)
-                train_arg+= r", save_name='"+'{:d}_{:d}_{:d}grid'.format(seed, i_ksi, i_c)+r"'"
+                train_arg += r", save_name='" + '{:d}_{:d}_{:d}grid'.format(seed, i_ksi, i_c) + r"'"
 
-                cmd     = r'''python -c "import paper as p;p.cont_train('''+train_arg+''')"'''
+                cmd = r'''python -c "import paper as p;p.cont_train(''' + train_arg + ''')"'''
 
                 jobfile = write_jobfile(cmd, jobname, sbatchpath, scratchpath, ppn=1, gpus=0)
                 subprocess.call(['sbatch', jobfile])

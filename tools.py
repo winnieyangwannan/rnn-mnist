@@ -18,13 +18,13 @@ def gen_feed_dict(model, trial, hp):
         n_time, batch_size = trial.x.shape[:2]
         new_shape = [n_time,
                      batch_size,
-                     hp['rule_start']*hp['n_rule']]
+                     hp['rule_start'] * hp['n_rule']]
 
         x = np.zeros(new_shape, dtype=np.float32)
         for i in range(batch_size):
             ind_rule = np.argmax(trial.x[0, i, hp['rule_start']:])
-            i_start = ind_rule*hp['rule_start']
-            x[:, i, i_start:i_start+hp['rule_start']] = \
+            i_start = ind_rule * hp['rule_start']
+            x[:, i, i_start:i_start + hp['rule_start']] = \
                 trial.x[:, i, :hp['rule_start']]
 
         feed_dict = {model.x: x,
@@ -75,7 +75,7 @@ def load_log(model_dir):
     return log
 
 
-def save_log(log): 
+def save_log(log):
     """Save the log file of model."""
     model_dir = log['model_dir']
     fname = os.path.join(model_dir, 'log.json')
@@ -96,7 +96,7 @@ def load_hp(model_dir):
 
     # Use a different seed aftering loading,
     # since loading is typically for analysis
-    hp['rng'] = np.random.RandomState(hp['seed']+1000)
+    hp['rng'] = np.random.RandomState(hp['seed'] + 1000)
     return hp
 
 
@@ -170,7 +170,7 @@ def find_model(root_dir, hp_target, perf_min=None):
     if log['perf_min'][-1] < hp['target_perf']:
         print("""Warning: this network perform {:0.2f}, not reaching target
               performance {:0.2f}.""".format(
-              log['perf_min'][-1], hp['target_perf']))
+            log['perf_min'][-1], hp['target_perf']))
 
     return d
 
@@ -208,15 +208,15 @@ def gen_ortho_matrix(dim, rng=None):
     H = np.eye(dim)
     for n in range(1, dim):
         if rng is None:
-            x = np.random.normal(size=(dim-n+1,))
+            x = np.random.normal(size=(dim - n + 1,))
         else:
-            x = rng.normal(size=(dim-n+1,))
+            x = rng.normal(size=(dim - n + 1,))
         # random sign, 50/50, but chosen carefully to avoid roundoff error
         D = np.sign(x[0])
-        x[0] += D*np.sqrt((x*x).sum())
+        x[0] += D * np.sqrt((x * x).sum())
         # Householder transformation
-        Hx = -D*(np.eye(dim-n+1) - 2.*np.outer(x, x)/(x*x).sum())
+        Hx = -D * (np.eye(dim - n + 1) - 2. * np.outer(x, x) / (x * x).sum())
         mat = np.eye(dim)
-        mat[n-1:, n-1:] = Hx
+        mat[n - 1:, n - 1:] = Hx
         H = np.dot(H, mat)
     return H
